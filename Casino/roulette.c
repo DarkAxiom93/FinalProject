@@ -1,16 +1,15 @@
 ﻿#define _CRT_SECURE_NO_WARNINGS
-#include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include "casino.h"
+#include "utils.h"
 
 #define MAX_BETS_PER_SPIN 10
 
-
 int get_number_color(int number) {
     if (number == 0 || number == 37) return 0;
-    int red_numbers[] = { 1, 3, 5, 7, 9, 12, 14, 16, 18, 21, 23, 25, 27, 28, 30, 32, 34, 36 };
+    int red_numbers[] = { 1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36 };
     for (int i = 0; i < 18; i++) {
         if (number == red_numbers[i]) return 1;
     }
@@ -41,25 +40,21 @@ void print_roulette_board() {
     printf("\n");
 
     printf("         ");
-    printf(BG_GREEN TEXT_WHITE "           1st 12           " RESET);
-    printf(BG_GREEN TEXT_WHITE "           2nd 12           " RESET);
-    printf(BG_GREEN TEXT_WHITE "           3rd 12           " RESET);
+    printf(BG_GREEN TEXT_WHITE "        1st 12        " RESET);
+    printf(BG_GREEN TEXT_WHITE "        2nd 12        " RESET);
+    printf(BG_GREEN TEXT_WHITE "        3rd 12        " RESET);
     printf("\n");
 
     printf("         ");
-    printf(BG_GREEN TEXT_WHITE "     1-18     " RESET);
-    printf(BG_GREEN TEXT_WHITE "     Even     " RESET);
-    printf(BG_RED TEXT_WHITE   "     Red      " RESET);
-    printf(BG_BLACK TEXT_WHITE "    Black     " RESET);
-    printf(BG_GREEN TEXT_WHITE "     Odd      " RESET);
-    printf(BG_GREEN TEXT_WHITE "     19-36    " RESET);
+    printf(BG_GREEN TEXT_WHITE "   1-18   " RESET);
+    printf(BG_GREEN TEXT_WHITE "   Even   " RESET);
+    printf(BG_RED TEXT_WHITE   "   Red    " RESET);
+    printf(BG_BLACK TEXT_WHITE "  Black   " RESET);
+    printf(BG_GREEN TEXT_WHITE "   Odd    " RESET);
+    printf(BG_GREEN TEXT_WHITE "   19-36  " RESET);
     printf("\n\n");
 }
 
-/*
- * פונקציה: print_active_bets
- * תפקיד: מדפיסה את רשימת ההימורים הפעילים לפני ביצוע הסיבוב.
- */
 void print_active_bets(Bet active_bets[], int count) {
     if (count == 0) {
         printf("\n\x1b[33mNo active bets on the table right now.\x1b[0m\n");
@@ -97,10 +92,6 @@ void print_active_bets(Bet active_bets[], int count) {
     printf("---------------------------\n");
 }
 
-/*
- * פונקציה: place_bet
- * תפקיד: מנהלת את תהליך בחירת ההימור כולל ההימורים החדשים והגנות הקלט
- */
 Bet place_bet() {
     Bet new_bet = { 0 };
     new_bet.bet_type = 0;
@@ -121,7 +112,7 @@ Bet place_bet() {
         printf("Enter a number (0-36, or 37 for '00'): ");
         int num = get_safe_int();
         if (num < 0 || num > 37) {
-            printf("\x1b[31mError: Number must be between 0 and 36 (or 37 for 00)!\x1b[0m\n");
+            printf("\x1b[31mError: Invalid roulette number! Must be 0-36, or 37 for 00.\x1b[0m\n");
             return new_bet;
         }
         new_bet.numbers[0] = num;
@@ -166,7 +157,7 @@ Bet place_bet() {
         new_bet.bet_type = 2;
         break;
 
-    case 3: // Dozens
+    case 3:
         printf("Choose Dozen (1 for 1-12, 2 for 13-24, 3 for 25-36): ");
         int dozen = get_safe_int();
         if (dozen < 1 || dozen > 3) {
@@ -178,21 +169,39 @@ Bet place_bet() {
         new_bet.bet_type = 3;
         break;
 
-    case 4: // Color
-        printf("Choose color (1 for Red, 2 for Black): ");
-        new_bet.numbers[0] = get_safe_int();
+    case 4:
+        printf("Choose color (\x1b[31mR\x1b[0m for Red, \x1b[97mB\x1b[0m for Black): ");
+        char color_choice;
+
+        if (scanf(" %c", &color_choice) != 1) {
+            printf("\x1b[31mInvalid input format.\x1b[0m\n");
+            while (getchar() != '\n');
+            return new_bet;
+        }
+        while (getchar() != '\n');
+
+        if (color_choice == 'R' || color_choice == 'r') {
+            new_bet.numbers[0] = 1;
+        }
+        else if (color_choice == 'B' || color_choice == 'b') {
+            new_bet.numbers[0] = 2;
+        }
+        else {
+            printf("\x1b[31mError: Invalid choice! You must enter R or B.\x1b[0m\n");
+            return new_bet;
+        }
         new_bet.num_count = 1;
         new_bet.bet_type = 4;
         break;
 
-    case 5: // Even/Odd
+    case 5:
         printf("Choose (1 for Even, 2 for Odd): ");
         new_bet.numbers[0] = get_safe_int();
         new_bet.num_count = 1;
         new_bet.bet_type = 5;
         break;
 
-    case 6: // Halves
+    case 6:
         printf("Choose Half (1 for 1-18, 2 for 19-36): ");
         new_bet.numbers[0] = get_safe_int();
         new_bet.num_count = 1;
@@ -209,43 +218,39 @@ Bet place_bet() {
     return new_bet;
 }
 
-/*
- * פונקציה: check_win
- * תפקיד: בודקת זכיות כולל התאמה לכל חוקי הרולטה החדשים
- */
 int check_win(Bet b, int spin_result) {
     int spin_color = get_number_color(spin_result);
     int is_winner = 0;
     int payout_multiplier = 0;
 
     switch (b.bet_type) {
-    case 1: // Straight
+    case 1:
         if (spin_result == b.numbers[0]) {
             is_winner = 1; payout_multiplier = 35;
         }
         break;
-    case 2: // Split
+    case 2:
         if (spin_result == b.numbers[0] || spin_result == b.numbers[1]) {
             is_winner = 1; payout_multiplier = 17;
         }
         break;
-    case 3: // Dozens
+    case 3:
         if (b.numbers[0] == 1 && spin_result >= 1 && spin_result <= 12) { is_winner = 1; payout_multiplier = 2; }
         else if (b.numbers[0] == 2 && spin_result >= 13 && spin_result <= 24) { is_winner = 1; payout_multiplier = 2; }
         else if (b.numbers[0] == 3 && spin_result >= 25 && spin_result <= 36) { is_winner = 1; payout_multiplier = 2; }
         break;
-    case 4: // Color
+    case 4:
         if (spin_color == b.numbers[0]) {
             is_winner = 1; payout_multiplier = 1;
         }
         break;
-    case 5: // Even/Odd (0 and 00 lose)
+    case 5:
         if (spin_result != 0 && spin_result != 37) {
             if (b.numbers[0] == 1 && spin_result % 2 == 0) { is_winner = 1; payout_multiplier = 1; }
             else if (b.numbers[0] == 2 && spin_result % 2 != 0) { is_winner = 1; payout_multiplier = 1; }
         }
         break;
-    case 6: // Halves (0 and 00 lose)
+    case 6:
         if (spin_result != 0 && spin_result != 37) {
             if (b.numbers[0] == 1 && spin_result >= 1 && spin_result <= 18) { is_winner = 1; payout_multiplier = 1; }
             else if (b.numbers[0] == 2 && spin_result >= 19 && spin_result <= 36) { is_winner = 1; payout_multiplier = 1; }
@@ -257,14 +262,6 @@ int check_win(Bet b, int spin_result) {
     return 0;
 }
 
-/*
- * פונקציה: print_roulette_welcome
- * תפקיד: מדפיסה באנר כניסה מרשים לרולטה כולל חוקי המשחק ויחסי הזכייה
- */
- /*
-  * פונקציה: print_roulette_welcome
-  * תפקיד: מדפיסה באנר כניסה לרולטה וממתינה לאישור המשתמש
-  */
 void print_roulette_welcome() {
     system("cls");
     printf("\x1b[31m");
@@ -287,14 +284,11 @@ void print_roulette_welcome() {
     printf(" * Color / Even / Odd      : Pays 1 to 1\n");
     printf("\x1b[36m=========================================================================\x1b[0m\n\n");
 
-    // העברת השליטה למשתמש (UX משופר)
     printf("\x1b[32mPress ENTER to acknowledge rules and join the table...\x1b[0m");
-    wait_for_enter(); // ממתין לאישור
+    wait_for_enter();
     system("cls");
 }
-/*
- * פונקציה: play_roulette
- */
+
 void play_roulette(Player* player) {
     int is_playing = 1;
     Bet active_bets[MAX_BETS_PER_SPIN];
@@ -303,9 +297,9 @@ void play_roulette(Player* player) {
     print_roulette_welcome();
 
     while (is_playing) {
-        printf("\n--- \x1b[36mROULETTE TABLE\x1b[0m ---\n");
+        print_table_header("ROULETTE TABLE", "\x1b[36m", player->balance);
         print_roulette_board();
-        printf("Current Balance: $%d | Active Bets on table: %d\n", player->balance, num_active_bets);
+        printf("Active Bets on table: %d\n", num_active_bets);
 
         printf("\nOptions:\n");
         printf("0. Leave Table\n");

@@ -1,6 +1,8 @@
 ﻿#ifndef UTILS_H
 #define UTILS_H
 
+#include <stdlib.h> // פותר את שגיאת size_t
+
 // קודי צבע ANSI לשימוש בכל רחבי הפרויקט
 #define BG_RED     "\x1b[41m"
 #define BG_BLACK   "\x1b[40m"
@@ -12,9 +14,8 @@
 int get_safe_int();
 void delay_ms(int ms);
 void print_animated_banner();
-
 void wait_for_enter();
-// פונקציות עיצוב ושליטה
 void print_table_header(const char* title, const char* color, int balance);
 void* safe_malloc(size_t size);
-#endif#
+
+#endif

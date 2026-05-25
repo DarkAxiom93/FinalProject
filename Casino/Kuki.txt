@@ -1,7 +1,7 @@
 === CASINO PLAYER PROFILE ===
 Player_Name: Kuki
-Current_Balance: $100
+Current_Balance: $110
 -----------------------------
-Total_Winnings: $-858993437
-Total_Losses: $-858993414
+Total_Winnings: $-858993450
+Total_Losses: $-858993460
 =============================
