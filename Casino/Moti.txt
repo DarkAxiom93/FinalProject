@@ -1,0 +1,7 @@
+=== CASINO PLAYER PROFILE ===
+Player_Name: Moti
+Current_Balance: $-858993460
+-----------------------------
+Total_Winnings: $-858993460
+Total_Losses: $-858993460
+=============================

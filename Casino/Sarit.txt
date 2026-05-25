@@ -1,0 +1,7 @@
+=== CASINO PLAYER PROFILE ===
+Player_Name: Sarit
+Current_Balance: $1000
+-----------------------------
+Total_Winnings: $150
+Total_Losses: $150
+=============================

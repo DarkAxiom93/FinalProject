@@ -1,0 +1,7 @@
+=== CASINO PLAYER PROFILE ===
+Player_Name: Mot
+Current_Balance: $986
+-----------------------------
+Total_Winnings: $0
+Total_Losses: $14
+=============================
