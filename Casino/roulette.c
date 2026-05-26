@@ -9,11 +9,29 @@
 
 int get_number_color(int number) {
     if (number == 0 || number == 37) return 0;
-    int red_numbers[] = { 1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36 };
+    int red_numbers[] = { 1, 3, 5, 7, 9, 12, 14, 16, 18, 21, 23, 25, 27, 28, 30, 32, 34, 36 };
     for (int i = 0; i < 18; i++) {
         if (number == red_numbers[i]) return 1;
     }
     return 2;
+}
+
+// פונקציה חדשה: הדפסת 5 התוצאות האחרונות (UX)
+void print_spin_history(int history[]) {
+    printf("\n\x1b[36m--- LAST 5 SPINS ---\x1b[0m\n[ ");
+    for (int i = 0; i < 5; i++) {
+        if (history[i] != -1) {
+            int color = get_number_color(history[i]);
+            if (history[i] == 37) printf(BG_GREEN TEXT_WHITE " 00 " RESET " ");
+            else if (color == 1) printf(BG_RED TEXT_WHITE " %02d " RESET " ", history[i]);
+            else if (color == 2) printf(BG_BLACK TEXT_WHITE " %02d " RESET " ", history[i]);
+            else printf(BG_GREEN TEXT_WHITE "  0 " RESET " ");
+        }
+        else {
+            printf(" --  ");
+        }
+    }
+    printf("]\n");
 }
 
 void print_roulette_board() {
@@ -40,18 +58,18 @@ void print_roulette_board() {
     printf("\n");
 
     printf("         ");
-    printf(BG_GREEN TEXT_WHITE "        1st 12        " RESET);
-    printf(BG_GREEN TEXT_WHITE "        2nd 12        " RESET);
-    printf(BG_GREEN TEXT_WHITE "        3rd 12        " RESET);
+    printf(BG_GREEN TEXT_WHITE "           1st 12           " RESET);
+    printf(BG_GREEN TEXT_WHITE "           2nd 12           " RESET);
+    printf(BG_GREEN TEXT_WHITE "           3rd 12           " RESET);
     printf("\n");
 
     printf("         ");
-    printf(BG_GREEN TEXT_WHITE "   1-18   " RESET);
-    printf(BG_GREEN TEXT_WHITE "   Even   " RESET);
-    printf(BG_RED TEXT_WHITE   "   Red    " RESET);
-    printf(BG_BLACK TEXT_WHITE "  Black   " RESET);
-    printf(BG_GREEN TEXT_WHITE "   Odd    " RESET);
-    printf(BG_GREEN TEXT_WHITE "   19-36  " RESET);
+    printf(BG_GREEN TEXT_WHITE "     1-18     " RESET);
+    printf(BG_GREEN TEXT_WHITE "     Even     " RESET);
+    printf(BG_RED TEXT_WHITE   "     Red      " RESET);
+    printf(BG_BLACK TEXT_WHITE "    Black     " RESET);
+    printf(BG_GREEN TEXT_WHITE "     Odd      " RESET);
+    printf(BG_GREEN TEXT_WHITE "     19-36    " RESET);
     printf("\n\n");
 }
 
@@ -294,10 +312,14 @@ void play_roulette(Player* player) {
     Bet active_bets[MAX_BETS_PER_SPIN];
     int num_active_bets = 0;
 
+    // מערך ההיסטוריה החדש (-1 מייצג שאין עדיין תוצאה)
+    int history[5] = { -1, -1, -1, -1, -1 };
+
     print_roulette_welcome();
 
     while (is_playing) {
         print_table_header("ROULETTE TABLE", "\x1b[36m", player->balance);
+        print_spin_history(history); // קריאה להדפסת ההיסטוריה
         print_roulette_board();
         printf("Active Bets on table: %d\n", num_active_bets);
 
@@ -369,6 +391,12 @@ void play_roulette(Player* player) {
             else if (spin_color == 1) printf(BG_RED TEXT_WHITE "  %d (RED)  " RESET "\n\n", spin_result);
             else if (spin_color == 2) printf(BG_BLACK TEXT_WHITE "  %d (BLACK)  " RESET "\n\n", spin_result);
             else printf(BG_GREEN TEXT_WHITE "  0 (GREEN)  " RESET "\n\n");
+
+            // עדכון היסטוריית המספרים - מזיזים הכל שמאלה ודוחפים את החדש
+            for (int i = 4; i > 0; i--) {
+                history[i] = history[i - 1];
+            }
+            history[0] = spin_result;
 
             int total_round_winnings = 0;
             for (int i = 0; i < num_active_bets; i++) {

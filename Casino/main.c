@@ -6,22 +6,16 @@
 #include "casino.h"
 #include "utils.h" 
 
-// מבנה נתונים ייעודי לניהול טבלת השיאים
 typedef struct {
     char name[MAX_NAME_LEN];
     int score;
 } Highscore;
 
-/*
- * פונקציה: update_leaderboard
- * תפקיד: מעדכנת את טבלת השיאים בקובץ המרכזי עם יציאת השחקן
- * מדגים: קבצים, מערכים, ואלגוריתם מיון (Bubble Sort)
- */
 void update_leaderboard(Player* p) {
-    Highscore scores[6]; // מקום ל-5 הטובים ביותר + השחקן הנוכחי
+    // תיקון אזהרה C6001: איפוס מלא של מערך השיאים כדי למנוע ערכי זבל
+    Highscore scores[6] = { 0 };
     int count = 0;
 
-    // קריאת השיאים הקיימים מקובץ
     FILE* file = fopen("highscores.txt", "r");
     if (file != NULL) {
         while (count < 5 && fscanf(file, "%s %d", scores[count].name, &scores[count].score) == 2) {
@@ -30,11 +24,9 @@ void update_leaderboard(Player* p) {
         fclose(file);
     }
 
-    // בדיקה האם השחקן כבר קיים בטבלה
     int found = 0;
     for (int i = 0; i < count; i++) {
         if (strcmp(scores[i].name, p->name) == 0) {
-            // אם הוא כבר שם, נעדכן את השיא שלו רק אם הוא הרוויח יותר
             if (p->balance > scores[i].score) {
                 scores[i].score = p->balance;
             }
@@ -43,14 +35,12 @@ void update_leaderboard(Player* p) {
         }
     }
 
-    // אם הוא לא קיים בטבלה, נוסיף אותו לסוף המערך
     if (!found) {
         strcpy(scores[count].name, p->name);
         scores[count].score = p->balance;
         count++;
     }
 
-    // אלגוריתם מיון (Bubble Sort) לסדור הרשימה מהגבוה לנמוך
     for (int i = 0; i < count - 1; i++) {
         for (int j = 0; j < count - i - 1; j++) {
             if (scores[j].score < scores[j + 1].score) {
@@ -61,7 +51,6 @@ void update_leaderboard(Player* p) {
         }
     }
 
-    // כתיבת 5 הגדולים בחזרה לקובץ
     int limit = (count > 5) ? 5 : count;
     file = fopen("highscores.txt", "w");
     if (file != NULL) {
@@ -72,13 +61,9 @@ void update_leaderboard(Player* p) {
     }
 }
 
-/*
- * פונקציה: display_leaderboard
- * תפקיד: מדפיסה את "היכל התהילה" של הקזינו (UX משופר)
- */
 void display_leaderboard() {
     system("cls");
-    printf("\x1b[33m"); // צבע צהוב/זהב
+    printf("\x1b[33m");
     printf("==================================================\n");
     printf("           C A S I N O   H A L L   O F   F A M E  \n");
     printf("==================================================\n\x1b[0m");
@@ -109,25 +94,43 @@ void display_leaderboard() {
     wait_for_enter();
 }
 
+/*
+ * פונקציה: load_player
+ * שודרגה משמעותית כדי למנוע קריסות קריאה (Garbage Values)
+ * משתמשת בקריאת שורות בטוחה וחיפוש מילות מפתח במקום ניחוש מבנה קשיח.
+ */
 void load_player(Player* p) {
+    // שלב 1: הצבת ערכי ברירת מחדל כדי למנוע הופעת מספרים שליליים עצומים במידה והקריאה נכשלת
+    p->balance = 1000;
+    p->total_winnings = 0;
+    p->total_losses = 0;
+
     char filename[MAX_NAME_LEN + 5];
     sprintf(filename, "%s.txt", p->name);
 
     FILE* file = fopen(filename, "r");
     if (file != NULL) {
-        fscanf(file, "=== CASINO PLAYER PROFILE ===\n");
-        fscanf(file, "Player_Name: %s\n", p->name);
-        fscanf(file, "Current_Balance: $%d\n", &p->balance);
-        fscanf(file, "Total_Winnings: $%d\n", &p->total_winnings);
-        fscanf(file, "Total_Losses: $%d\n", &p->total_losses);
-
+        char buffer[256];
+        // קורא את הקובץ שורה אחר שורה כדי להתגבר על בעיות של ווינדוס (CRLF)
+        while (fgets(buffer, sizeof(buffer), file)) {
+            // חיפוש מילות המפתח בתוך השורה וחילוץ המספרים (פותר את אזהרות ה-C6031)
+            if (strstr(buffer, "Player_Name:")) {
+                if (sscanf(buffer, "Player_Name: %s", p->name) == 1) {}
+            }
+            else if (strstr(buffer, "Current_Balance:")) {
+                if (sscanf(buffer, "Current_Balance: $%d", &p->balance) == 1) {}
+            }
+            else if (strstr(buffer, "Total_Winnings:")) {
+                if (sscanf(buffer, "Total_Winnings: $%d", &p->total_winnings) == 1) {}
+            }
+            else if (strstr(buffer, "Total_Losses:")) {
+                if (sscanf(buffer, "Total_Losses: $%d", &p->total_losses) == 1) {}
+            }
+        }
         printf("\n\x1b[32mWelcome back, %s! Your profile was loaded.\x1b[0m\n", p->name);
         fclose(file);
     }
     else {
-        p->balance = 1000;
-        p->total_winnings = 0;
-        p->total_losses = 0;
         printf("\n\x1b[36mNew account created for %s. Starting balance: $1000.\x1b[0m\n", p->name);
     }
 }
@@ -146,7 +149,6 @@ void save_player(Player* p) {
         fprintf(file, "Total_Losses: $%d\n", p->total_losses);
         fprintf(file, "=============================\n");
         fclose(file);
-        printf("\x1b[32mPlayer data saved successfully to '%s'.\x1b[0m\n", filename);
     }
     else {
         printf("\x1b[31mError: Could not save player data!\x1b[0m\n");
@@ -155,8 +157,12 @@ void save_player(Player* p) {
 
 int main() {
     srand((unsigned int)time(NULL));
-    Player current_player;
+
+    // תיקון חובה: איפוס המשתנה באפסים כדי ששום "ערך זבל" לא יישאר בזיכרון הראשי
+    Player current_player = { 0 };
+
     int choice;
+    int session_start_balance = 0;
 
     print_animated_banner();
 
@@ -165,10 +171,10 @@ int main() {
     if (scanf("%49s", current_player.name) != 1) {
         strcpy(current_player.name, "Guest");
     }
-    // ניקוי חוצץ המקלדת כדי למנוע קפיצה ישר לתוך התפריט
     while (getchar() != '\n');
 
     load_player(&current_player);
+    session_start_balance = current_player.balance;
     delay_ms(1500);
 
     while (1) {
@@ -182,7 +188,7 @@ int main() {
 
         if (current_player.balance <= 0) {
             printf("\x1b[31mGAME OVER: You are bankrupt!\x1b[0m\n");
-            update_leaderboard(&current_player); // עדכון הטבלה לפני היציאה
+            update_leaderboard(&current_player);
             save_player(&current_player);
             break;
         }
@@ -194,7 +200,7 @@ int main() {
         printf("4. Slot Machine\n");
         printf("5. Craps (Dice Game)\n");
         printf("6. Exit Casino\n");
-        printf("7. View Leaderboard (Hall of Fame)\n"); // אופציה חדשה
+        printf("7. View Leaderboard (Hall of Fame)\n");
         printf("Your choice: ");
 
         choice = get_safe_int();
@@ -217,16 +223,44 @@ int main() {
             // play_slots(&current_player); 
             break;
         case 5:
-            printf("\n--- Entering Craps Table ---\n");
-            play_craps(&current_player); 
+            system("cls");
+            play_craps(&current_player);
             break;
         case 6:
-            printf("\nThank you for playing, %s! You left with $%d.\n", current_player.name, current_player.balance);
-            update_leaderboard(&current_player); // עדכון טבלת השיאים
-            save_player(&current_player);        // שמירת משתמש
+        {
+            int session_net = current_player.balance - session_start_balance;
+            system("cls");
+            printf("\n========================================\n");
+            printf("          \x1b[36mCASINO CHECKOUT RECEIPT\x1b[0m          \n");
+            printf("========================================\n");
+            printf(" Player Name      : %s\n", current_player.name);
+            printf(" Starting Balance : $%d\n", session_start_balance);
+            printf(" Final Balance    : $%d\n", current_player.balance);
+            printf("----------------------------------------\n");
+
+            if (session_net > 0) {
+                printf(" Session Profit   : \x1b[32m+$%d\x1b[0m\n", session_net);
+            }
+            else if (session_net < 0) {
+                printf(" Session Loss     : \x1b[31m-$%d\x1b[0m\n", -session_net);
+            }
+            else {
+                printf(" Session Net      : $0 (Broke Even)\n");
+            }
+
+            printf(" Lifetime Wins    : $%d\n", current_player.total_winnings);
+            printf(" Lifetime Losses  : $%d\n", current_player.total_losses);
+            printf("========================================\n");
+            printf("\x1b[33m Thank you for playing! See you next time.\x1b[0m\n");
+
+            update_leaderboard(&current_player);
+            save_player(&current_player);
+
+            delay_ms(4000);
             return 0;
+        }
         case 7:
-            display_leaderboard(); // הצגת הטבלה
+            display_leaderboard();
             break;
         default:
             printf("\n\x1b[33mInvalid choice. Please select a valid option.\x1b[0m\n");
