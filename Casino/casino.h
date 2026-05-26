@@ -30,6 +30,8 @@ typedef struct {
 void print_roulette_board();
 void play_roulette(Player* p);
 void play_blackjack(Player* p); // הוסף את השורה הזו
-void play_craps(Player* p);
+void play_football(Player* p); // המחליף של קראפס
+void play_poker(Player* p);    // לשותף
+void play_slots(Player* p);    // לשותף
 
 #endif

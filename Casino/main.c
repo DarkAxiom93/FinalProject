@@ -198,7 +198,7 @@ int main() {
         printf("2. Blackjack\n");
         printf("3. Poker (vs Dealer)\n");
         printf("4. Slot Machine\n");
-        printf("5. Craps (Dice Game)\n");
+        printf("5. Football\n");
         printf("6. Exit Casino\n");
         printf("7. View Leaderboard (Hall of Fame)\n");
         printf("Your choice: ");
@@ -220,11 +220,11 @@ int main() {
             break;
         case 4:
             printf("\n--- Entering Slot Machine Area ---\n");
-            // play_slots(&current_player); 
+            play_slots(&current_player); 
             break;
         case 5:
             system("cls");
-            play_craps(&current_player);
+            play_football(&current_player);
             break;
         case 6:
         {

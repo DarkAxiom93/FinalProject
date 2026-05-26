@@ -129,8 +129,10 @@
   <ItemGroup>
     <ClCompile Include="blackjack.c" />
     <ClCompile Include="craps.c" />
+    <ClCompile Include="football.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="roulette.c" />
+    <ClCompile Include="slots.c" />
     <ClCompile Include="utils.c" />
   </ItemGroup>
   <ItemGroup>

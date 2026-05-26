@@ -30,6 +30,12 @@
     <ClCompile Include="craps.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="football.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="slots.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="casino.h">
