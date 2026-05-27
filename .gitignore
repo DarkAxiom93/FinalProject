@@ -1,5 +1,11 @@
-.vs
-bin
-obj
 node_modules
 .env
+.vs/
+bin/
+obj/
+x64/
+Debug/
+Release/
+*.obj
+*.exe
+*.pdb
