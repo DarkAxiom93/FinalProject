@@ -5,3 +5,4 @@ Current_Balance: $68
 Total_Winnings: $0
 Total_Losses: $49
 =============================
+Bank_Balance: $0

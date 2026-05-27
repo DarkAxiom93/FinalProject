@@ -78,7 +78,7 @@ void display_leaderboard() {
 }
 
 void load_player(Player* p) {
-    p->balance = 1000; p->total_winnings = 0; p->total_losses = 0;
+    p->balance = 1000; p->bank_balance = 0; p->total_winnings = 0; p->total_losses = 0;
     char filename[MAX_NAME_LEN + 5]; sprintf(filename, "%s.txt", p->name);
     FILE* file = fopen(filename, "r");
     if (file != NULL) {
@@ -88,6 +88,9 @@ void load_player(Player* p) {
             else if (strstr(buffer, "Current_Balance:")) { if (sscanf(buffer, "Current_Balance: $%d", &p->balance) == 1) {} }
             else if (strstr(buffer, "Total_Winnings:")) { if (sscanf(buffer, "Total_Winnings: $%d", &p->total_winnings) == 1) {} }
             else if (strstr(buffer, "Total_Losses:")) { if (sscanf(buffer, "Total_Losses: $%d", &p->total_losses) == 1) {} }
+            else if (strstr(buffer, "Bank_Balance:")) {
+                if (sscanf(buffer, "Bank_Balance: $%d", &p->bank_balance) == 1) {}
+            }
         }
         printf("\n\x1b[32mWelcome back, %s! Your profile was loaded.\x1b[0m\n", p->name);
         fclose(file);
@@ -102,43 +105,95 @@ void save_player(Player* p) {
     FILE* file = fopen(filename, "w");
     if (file != NULL) {
         fprintf(file, "=== CASINO PLAYER PROFILE ===\nPlayer_Name: %s\nCurrent_Balance: $%d\n-----------------------------\nTotal_Winnings: $%d\nTotal_Losses: $%d\n=============================\n", p->name, p->balance, p->total_winnings, p->total_losses);
+        fprintf(file, "Bank_Balance: $%d\n", p->bank_balance); // <--- הוסיפו שורה זו
         fclose(file);
     }
     else { printf("\x1b[31mError: Could not save player data!\x1b[0m\n"); }
 }
 
-// פונקציית הקופאי החדשה
-void handle_deposit(Player* p) {
+// פונקציית עזר חדשה למשיכת כסף מהבנק לקופה של המשחק
+void handle_withdrawal(Player* p) {
     system("cls");
-    print_table_header("CASHIER (DEPOSIT)", "\x1b[32m", p->balance);
-    printf("Maximum allowed balance: $%d\n", MAX_BALANCE);
+    print_table_header("CASHIER (WITHDRAW)", "\x1b[32m", p->balance);
+    printf("Current funds locked in Bank: $%d\n", p->bank_balance);
 
-    if (p->balance >= MAX_BALANCE) {
-        printf("\n\x1b[33mYour account is already at or above the maximum limit ($%d).\x1b[0m\n", MAX_BALANCE);
-        printf("No further deposits allowed at this time.\n");
-        delay_ms(2500);
+    if (p->bank_balance <= 0) {
+        printf("\n\x1b[31mYour bank account is empty! Nothing to withdraw.\x1b[0m\n");
+        delay_ms(2000);
         return;
     }
 
-    printf("\nEnter amount to deposit (0 to cancel): $");
+    printf("\nEnter amount to withdraw from Bank (0 to cancel): $");
     int amount = get_safe_int();
 
     if (amount <= 0) {
-        printf("Deposit cancelled.\n");
-        delay_ms(1500);
+        printf("Withdrawal cancelled.\n");
+        delay_ms(1000);
         return;
     }
 
-    if (p->balance + amount > MAX_BALANCE) {
-        printf("\x1b[31mDeposit rejected! This would exceed the $%d limit.\x1b[0m\n", MAX_BALANCE);
-        printf("You can deposit up to $%d.\n", MAX_BALANCE - p->balance);
+    if (amount > p->bank_balance) {
+        printf("\x1b[31mError: You cannot withdraw more than what is in your bank ($%d)!\x1b[0m\n", p->bank_balance);
         delay_ms(2500);
     }
     else {
+        p->bank_balance -= amount;
         p->balance += amount;
-        printf("\x1b[32mSuccessfully deposited $%d. New balance: $%d.\x1b[0m\n", amount, p->balance);
-        save_player(p); // שומר את המצב אחרי הפקדה
+        printf("\x1b[32mSuccessfully withdrew $%d from Bank to your wallet!\x1b[0m\n", amount);
+        save_player(p); // שמירה מיידית לקובץ
         delay_ms(2000);
+    }
+}
+
+// פונקציית הקופאי המעודכנת - מנהלת גם הפקדות לקזינו וגם משיכות/הפקדות לבנק
+void handle_deposit(Player* p) {
+    system("cls");
+    print_table_header("CASINO CASHIER", "\x1b[32m", p->balance);
+    printf("Money in Wallet : $%d\n", p->balance);
+    printf("Money in Bank   : $%d\n", p->bank_balance);
+    printf("----------------------------------------\n");
+    printf("Select Action:\n");
+    printf("1. Deposit Money into Wallet (Max $50,000)\n");
+    printf("2. Move Money from Wallet into SAFE BANK\n");
+    printf("3. Withdraw Money from SAFE BANK back to Wallet\n");
+    printf("0. Return to Main Menu\n");
+    printf("Choice: ");
+
+    int sub_choice = get_safe_int();
+
+    if (sub_choice == 1) {
+        // לוגיקת ההפקדה הקיימת שלכם
+        if (p->balance >= MAX_BALANCE) {
+            printf("\n\x1b[33mWallet is already full.\x1b[0m\n");
+            delay_ms(2000); return;
+        }
+        printf("\nEnter amount to deposit to wallet: $");
+        int amount = get_safe_int();
+        if (amount <= 0) return;
+        if (p->balance + amount > MAX_BALANCE) {
+            printf("\x1b[31mExceeds limit!\x1b[0m\n"); delay_ms(2000);
+        }
+        else {
+            p->balance += amount; printf("\x1b[32mDeposited successfully.\x1b[0m\n"); save_player(p); delay_ms(1500);
+        }
+    }
+    else if (sub_choice == 2) {
+        // הפקדה לתוך הבנק המאובטח
+        printf("\nEnter amount to move into the Safe Bank (0 to cancel): $");
+        int amount = get_safe_int();
+        if (amount <= 0) return;
+        if (amount > p->balance) {
+            printf("\x1b[31mYou don't have that much money in your wallet!\x1b[0m\n"); delay_ms(2000);
+        }
+        else {
+            p->balance -= amount;
+            p->bank_balance += amount;
+            printf("\x1b[32m$%d safely moved to your Bank account!\x1b[0m\n", amount);
+            save_player(p); delay_ms(2000);
+        }
+    }
+    else if (sub_choice == 3) {
+        handle_withdrawal(p); // קריאה לפונקציית המשיכה החדשה
     }
 }
 
@@ -192,6 +247,7 @@ int main() {
         }
 
         print_table_header("CASINO - MAIN MENU", "\x1b[36m", current_player.balance);
+        printf("\x1b[32m  [ Safe Bank Balance: $%d ]\x1b[0m\n\n", current_player.bank_balance);
         printf("Select an option:\n");
         printf("1. Roulette\n2. Blackjack\n3. Ultimate Texas Hold'em\n4. Slot Machine\n5. Sports Betting (Winner)\n");
         printf("-------------------\n6. Cashier (Deposit Funds)\n7. View Leaderboard (Hall of Fame)\n8. Exit Casino\n");

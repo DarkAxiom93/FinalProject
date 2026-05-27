@@ -222,53 +222,76 @@ Bet place_bet() {
         new_bet.num_count = 2;
         new_bet.bet_type = 2;
 
+        // --- אלגוריתם הצעת פיצול 4 (Corner) ---
         int min_n = first_num < second_num ? first_num : second_num;
         int max_n = first_num > second_num ? first_num : second_num;
 
         if (min_n != 0 && min_n != 37 && max_n != 0 && max_n != 37) {
-            printf("\n\x1b[36mExpand this split into a 4-number Corner bet? (Y/N):\x1b[0m ");
-            char expand_choice;
-            if (scanf(" %c", &expand_choice) == 1) {
-                while (getchar() != '\n');
-                if (expand_choice == 'Y' || expand_choice == 'y') {
-                    int valid_corners[2][4] = { 0 };
-                    int corner_count = 0;
+            char expand_choice = ' ';
 
-                    if (max_n - min_n == 1) {
-                        if (min_n > 3) {
-                            valid_corners[corner_count][0] = min_n - 3; valid_corners[corner_count][1] = max_n - 3;
-                            valid_corners[corner_count][2] = min_n;     valid_corners[corner_count][3] = max_n;
-                            corner_count++;
-                        }
-                        if (max_n <= 33) {
-                            valid_corners[corner_count][0] = min_n;     valid_corners[corner_count][1] = max_n;
-                            valid_corners[corner_count][2] = min_n + 3; valid_corners[corner_count][3] = max_n + 3;
-                            corner_count++;
-                        }
+            // לולאה קשיחה 1: חסימת קלטים שאינם Y או N
+            while (1) {
+                printf("\n\x1b[36mExpand this split into a 4-number Corner bet? (Y/N):\x1b[0m ");
+                if (scanf(" %c", &expand_choice) == 1) {
+                    while (getchar() != '\n'); // ניקוי חוצץ
+                    if (expand_choice == 'Y' || expand_choice == 'y' || expand_choice == 'N' || expand_choice == 'n') {
+                        break; // קלט חוקי, יוצאים מהלולאה
                     }
-                    else if (max_n - min_n == 3) {
-                        if (min_n % 3 != 1) {
-                            valid_corners[corner_count][0] = min_n - 1; valid_corners[corner_count][1] = max_n - 1;
-                            valid_corners[corner_count][2] = min_n;     valid_corners[corner_count][3] = max_n;
-                            corner_count++;
-                        }
-                        if (max_n % 3 != 0) {
-                            valid_corners[corner_count][0] = min_n;     valid_corners[corner_count][1] = max_n;
-                            valid_corners[corner_count][2] = min_n + 1; valid_corners[corner_count][3] = max_n + 1;
-                            corner_count++;
-                        }
+                }
+                else {
+                    while (getchar() != '\n');
+                }
+                printf("\x1b[31mInvalid input!\x1b[0m Please press Only Y for Yes or N for No.\n");
+            }
+
+            if (expand_choice == 'Y' || expand_choice == 'y') {
+                int valid_corners[2][4] = { 0 };
+                int corner_count = 0;
+
+                if (max_n - min_n == 1) {
+                    if (min_n > 3) {
+                        valid_corners[corner_count][0] = min_n - 3; valid_corners[corner_count][1] = max_n - 3;
+                        valid_corners[corner_count][2] = min_n;     valid_corners[corner_count][3] = max_n;
+                        corner_count++;
+                    }
+                    if (max_n <= 33) {
+                        valid_corners[corner_count][0] = min_n;     valid_corners[corner_count][1] = max_n;
+                        valid_corners[corner_count][2] = min_n + 3; valid_corners[corner_count][3] = max_n + 3;
+                        corner_count++;
+                    }
+                }
+                else if (max_n - min_n == 3) {
+                    if (min_n % 3 != 1) {
+                        valid_corners[corner_count][0] = min_n - 1; valid_corners[corner_count][1] = max_n - 1;
+                        valid_corners[corner_count][2] = min_n;     valid_corners[corner_count][3] = max_n;
+                        corner_count++;
+                    }
+                    if (max_n % 3 != 0) {
+                        valid_corners[corner_count][0] = min_n;     valid_corners[corner_count][1] = max_n;
+                        valid_corners[corner_count][2] = min_n + 1; valid_corners[corner_count][3] = max_n + 1;
+                        corner_count++;
+                    }
+                }
+
+                if (corner_count > 0) {
+                    printf("Available Corners based on your split:\n");
+                    for (int c = 0; c < corner_count; c++) {
+                        printf("[%d]: [%d, %d, %d, %d]\n", c + 1, valid_corners[c][0], valid_corners[c][1], valid_corners[c][2], valid_corners[c][3]);
                     }
 
-                    if (corner_count > 0) {
-                        printf("Available Corners based on your split:\n");
-                        for (int c = 0; c < corner_count; c++) {
-                            printf("[%d]: [%d, %d, %d, %d]\n", c + 1, valid_corners[c][0], valid_corners[c][1], valid_corners[c][2], valid_corners[c][3]);
-                        }
+                    // לולאה קשיחה 2: הגנה ובחירת פיצול 4, כולל אפשרות ביטול (0) וניסיונות חוזרים
+                    while (1) {
                         printf("Select corner option (1");
                         if (corner_count == 2) printf(" or 2");
-                        printf(", or 0 to cancel expansion): ");
+                        printf(", or 0 to cancel expansion and keep original split): ");
 
                         int corner_choice = get_safe_int();
+
+                        if (corner_choice == 0) {
+                            printf("Expansion cancelled. Keeping original Split bet.\n");
+                            break;
+                        }
+
                         if (corner_choice > 0 && corner_choice <= corner_count) {
                             int sel = corner_choice - 1;
                             new_bet.numbers[0] = valid_corners[sel][0];
@@ -278,15 +301,15 @@ Bet place_bet() {
                             new_bet.num_count = 4;
                             new_bet.bet_type = 7;
                             printf("\x1b[32mUpgraded to Corner Bet!\x1b[0m\n");
+                            break; // בחירה תקינה, יוצאים מהלולאה
                         }
-                        else {
-                            printf("Expansion cancelled. Keeping original Split bet.\n");
-                        }
+
+                        printf("\x1b[31mInvalid option!\x1b[0m Please try again.\n");
                     }
                 }
             }
             else {
-                while (getchar() != '\n');
+                printf("Keeping original Split bet.\n");
             }
         }
         break;

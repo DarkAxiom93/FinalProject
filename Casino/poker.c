@@ -190,6 +190,10 @@ void play_poker(Player* player) {
         // שלב 1: טרום פלופ (Pre-Flop)
         // ==========================================
         printf("\n\x1b[36mDealing hole cards...\x1b[0m\n");
+
+        // מקרא הסימנים החדש שיופיע מעל הקלפים
+        printf(" [ Legend: \x1b[31mH\x1b[0m=Hearts | \x1b[31mD\x1b[0m=Diamonds | \x1b[97mC\x1b[0m=Clubs | \x1b[97mS\x1b[0m=Spades ]\n");
+
         print_poker_hand_ascii(player_cards, 2, "Your Hand", 0);
 
         printf("Current Bets -> Ante: $%d | Blind: $%d | Trips: $%d\n", ante, blind, trips);
@@ -214,6 +218,8 @@ void play_poker(Player* player) {
         // ==========================================
         printf("\n\x1b[36mDealing the FLOP...\x1b[0m\n");
         delay_ms(1000);
+        // הדפסה חוזרת של קלפי השחקן לנוחות
+        print_poker_hand_ascii(player_cards, 2, "Your Hand", 0);
         print_poker_hand_ascii(community, 3, "Community Cards (FLOP)", 0);
 
         if (play_bet == 0) {
@@ -238,6 +244,8 @@ void play_poker(Player* player) {
         // ==========================================
         printf("\n\x1b[36mDealing Turn & River...\x1b[0m\n");
         delay_ms(1000);
+        // הדפסה חוזרת של קלפי השחקן רגע לפני ההחלטה הגורלית
+        print_poker_hand_ascii(player_cards, 2, "Your Hand", 0);
         print_poker_hand_ascii(community, 5, "Final Community Cards", 0);
 
         if (play_bet == 0) {

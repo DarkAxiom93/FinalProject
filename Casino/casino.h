@@ -7,6 +7,7 @@
 typedef struct {
     char name[MAX_NAME_LEN];
     int balance;         // יתרה נוכחית של השחקן
+    int bank_balance;
     int total_winnings;  // מעקב אחרי זכיות 
     int total_losses;    // מעקב אחרי הפסדים
 } Player;
