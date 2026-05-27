@@ -15,7 +15,7 @@ typedef struct {
 typedef struct {
     int amount;          // סכום ההימור
     int bet_type;        // סוג ההימור (1=Straight, 2=Split, 3=Street, 4=Color)
-    int numbers[3];      // מערך לשמירת עד 3 מספרים (עבור רחוב או פיצול)
+    int numbers[4];      // מערך לשמירת עד 3 מספרים (עבור רחוב או פיצול)
     int num_count;       // כמות המספרים השמורים במערך
 } Bet;
 

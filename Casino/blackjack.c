@@ -91,13 +91,13 @@ void print_hands(Card* hand, int count, const char* owner, int hide_second) {
 void print_blackjack_welcome() {
     system("cls");
     printf("\x1b[97m"); // צבע לבן
-    printf("  ____  ___      _______  _______  ___   _  _______  _______  _______  ___   _ \n");
-    printf(" |    ||   |    |       ||       ||   | | ||       ||       ||       ||   | | |\n");
-    printf(" |   _||   |    |   _   ||       ||   |_| ||_     _||   _   ||       ||   |_| |\n");
-    printf(" |  |  |   |    |  |_|  ||       ||      _|  |   |  |  |_|  ||       ||      _|\n");
-    printf(" |  |_ |   |___ |       ||      _||     |_   |   |  |       ||      _||     |_ \n");
-    printf(" |    ||       ||   _   ||     |_ |    _  |  |   |  |   _   ||     |_ |    _  |\n");
-    printf(" |____||_______||__| |__||_______||___| |_|  |___|  |__| |__||_______||___| |_|\n");
+    printf("  ______  ___      _______  _______  ___   _    ____  _______  _______  ___   _ \n");
+    printf(" |  __  \\|   |    |       ||       ||   | | |  |_   ||       ||       ||   | | |\n");
+    printf(" | |__| ||   |    |   _   ||       ||   |_| |    |  ||   _   ||       ||   |_| |\n");
+    printf(" |      /|   |    |  |_|  ||       ||      _|    |  ||  |_|  ||       ||      _|\n");
+    printf(" |  __  \\|   |___ |       ||      _||     |_  _  |  ||       ||      _||     |_ \n");
+    printf(" | |__| ||       ||   _   ||     |_ |    _  || |_|  ||   _   ||     |_ |    _  |\n");
+    printf(" |______/|_______||__| |__||_______||___| |_||______||__| |__||_______||___| |_|\n");
     printf("\x1b[0m\n");
 
     printf("\x1b[36m=========================================================================\x1b[0m\n");
@@ -188,7 +188,17 @@ void resolve_bets(int p_val, int p_busted, int d_val, int bet, Player* player, c
 
 void play_blackjack(Player* player) {
     int is_playing = 1;
+
+    // קריאה למסך החוקים
     print_blackjack_welcome();
+
+    // מעבר חלק ומזמין למשחק עצמו
+    system("cls");
+    printf("\n\x1b[33m==================================================\x1b[0m\n");
+    printf("  \x1b[36m[Dealer]\x1b[0m Welcome to the VIP Blackjack Table, %s!\n", player->name);
+    printf("  \x1b[36m[Dealer]\x1b[0m Shuffling the 6-deck shoe...\n");
+    printf("\x1b[33m==================================================\x1b[0m\n");
+    delay_ms(2000); // השהייה קטנה שיוצרת תחושת ציפייה
 
     while (is_playing) {
         // שימוש בתשתית הכותרת האחידה שלנו (DRY)

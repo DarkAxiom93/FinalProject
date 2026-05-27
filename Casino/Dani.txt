@@ -1,7 +1,7 @@
 === CASINO PLAYER PROFILE ===
-Player_Name: Kuki
-Current_Balance: $68
+Player_Name: Dani
+Current_Balance: $24999
 -----------------------------
-Total_Winnings: $0
-Total_Losses: $49
+Total_Winnings: $13
+Total_Losses: $21014
 =============================

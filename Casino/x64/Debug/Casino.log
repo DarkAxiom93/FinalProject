@@ -2,6 +2,7 @@
   craps.c
   football.c
   main.c
+  poker.c
   roulette.c
   slots.c
   utils.c
