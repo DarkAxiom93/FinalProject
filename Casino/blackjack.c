@@ -4,44 +4,26 @@
 #include <string.h>
 #include <time.h>
 #include "casino.h"
-#include "utils.h" // ייבוא תשתיות העזר שלנו
+#include "utils.h"
+#include "graphics.h"
+#include "cards.h"
 
-Card* create_deck() {
-    // שימוש ב-safe_malloc במקום malloc רגיל עם בדיקת שגיאות
-    Card* deck = (Card*)safe_malloc(52 * sizeof(Card));
-
-    char suits[] = { 'H', 'D', 'C', 'S' };
-    char* ranks[] = { "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A" };
-    int values[] = { 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10, 11 };
-
-    int index = 0;
-    for (int s = 0; s < 4; s++) {
-        for (int r = 0; r < 13; r++) {
-            strcpy(deck[index].rank, ranks[r]);
-            deck[index].suit = suits[s];
-            deck[index].value = values[r];
-            index++;
-        }
-    }
-    return deck;
-}
-
-void shuffle_deck(Card* deck) {
-    for (int i = 0; i < 52; i++) {
-        int r = i + rand() % (52 - i);
-        Card temp = deck[i];
-        deck[i] = deck[r];
-        deck[r] = temp;
-    }
-}
-
-int calculate_hand_value(Card* hand, int count) {
+// הלוגיקה מתרגמת את ערכי הפוקר האוניברסליים לערכי בלאק-ג'ק
+static int calculate_hand_value(Card* hand, int count) {
     int total = 0;
     int aces = 0;
 
     for (int i = 0; i < count; i++) {
-        total += hand[i].value;
-        if (strcmp(hand[i].rank, "A") == 0) aces++;
+        if (hand[i].rank_val == 14) { // Ace
+            total += 11;
+            aces++;
+        }
+        else if (hand[i].rank_val >= 11 && hand[i].rank_val <= 13) { // J, Q, K
+            total += 10;
+        }
+        else {
+            total += hand[i].rank_val; // 2-10
+        }
     }
 
     while (total > 21 && aces > 0) {
@@ -51,7 +33,7 @@ int calculate_hand_value(Card* hand, int count) {
     return total;
 }
 
-void print_hands(Card* hand, int count, const char* owner, int hide_second) {
+static void print_hands(Card* hand, int count, const char* owner, int hide_second) {
     printf("\n--- %s's Hand ---\n", owner);
 
     for (int i = 0; i < count; i++) printf("+-------+ ");
@@ -59,7 +41,7 @@ void print_hands(Card* hand, int count, const char* owner, int hide_second) {
 
     for (int i = 0; i < count; i++) {
         if (hide_second && i == 1) printf("|#######| ");
-        else printf("| %-2s    | ", hand[i].rank);
+        else printf("| %-2s    | ", hand[i].str);
     }
     printf("\n");
 
@@ -67,16 +49,16 @@ void print_hands(Card* hand, int count, const char* owner, int hide_second) {
         if (hide_second && i == 1) printf("|#######| ");
         else {
             if (hand[i].suit == 'H' || hand[i].suit == 'D')
-                printf("|   \x1b[31m%c\x1b[0m   | ", hand[i].suit);
+                printf("|   " C_RED "%c" C_RESET "   | ", hand[i].suit);
             else
-                printf("|   \x1b[97m%c\x1b[0m   | ", hand[i].suit);
+                printf("|   \x1b[97m%c" C_RESET "   | ", hand[i].suit);
         }
     }
     printf("\n");
 
     for (int i = 0; i < count; i++) {
         if (hide_second && i == 1) printf("|#######| ");
-        else printf("|    %2s | ", hand[i].rank);
+        else printf("|    %2s | ", hand[i].str);
     }
     printf("\n");
 
@@ -88,34 +70,7 @@ void print_hands(Card* hand, int count, const char* owner, int hide_second) {
     }
 }
 
-void print_blackjack_welcome() {
-    system("cls");
-    printf("\x1b[97m"); // צבע לבן
-    printf("  ______  ___      _______  _______  ___   _    ____  _______  _______  ___   _ \n");
-    printf(" |  __  \\|   |    |       ||       ||   | | |  |_   ||       ||       ||   | | |\n");
-    printf(" | |__| ||   |    |   _   ||       ||   |_| |    |  ||   _   ||       ||   |_| |\n");
-    printf(" |      /|   |    |  |_|  ||       ||      _|    |  ||  |_|  ||       ||      _|\n");
-    printf(" |  __  \\|   |___ |       ||      _||     |_  _  |  ||       ||      _||     |_ \n");
-    printf(" | |__| ||       ||   _   ||     |_ |    _  || |_|  ||   _   ||     |_ |    _  |\n");
-    printf(" |______/|_______||__| |__||_______||___| |_||______||__| |__||_______||___| |_|\n");
-    printf("\x1b[0m\n");
-
-    printf("\x1b[36m=========================================================================\x1b[0m\n");
-    printf("                       \x1b[33mTABLE RULES & PAYOUTS\x1b[0m\n");
-    printf("\x1b[36m=========================================================================\x1b[0m\n");
-    printf(" * Blackjack (21 on first 2 cards) : Pays 3 to 2\n");
-    printf(" * Standard Win                    : Pays 1 to 1\n");
-    printf(" * Dealer Rules                    : Dealer must hit on soft 17\n");
-    printf(" * Splitting                       : Allowed on matching pairs\n");
-    printf(" * Double Down                     : Allowed on initial hand\n");
-    printf("\x1b[36m=========================================================================\x1b[0m\n\n");
-
-    printf("\x1b[32mPress ENTER to acknowledge rules and join the table...\x1b[0m");
-    wait_for_enter();
-    system("cls");
-}
-
-void play_hand(Card* hand, int* count, Card* deck, int* deck_idx, int* bet, Player* player, const char* hand_name, int* busted) {
+static void play_hand(Card* hand, int* count, Card* deck, int* deck_idx, int* bet, Player* player, const char* hand_name, int* busted) {
     int val = calculate_hand_value(hand, *count);
 
     while (val < 21) {
@@ -128,7 +83,7 @@ void play_hand(Card* hand, int* count, Card* deck, int* deck_idx, int* bet, Play
             print_hands(hand, *count, hand_name, 0);
 
             if (val > 21) {
-                printf("\n\x1b[31mBUST!\x1b[0m %s went over 21.\n", hand_name);
+                printf("\n" C_RED "BUST!" C_RESET " %s went over 21.\n", hand_name);
                 *busted = 1;
                 player->total_losses += *bet;
             }
@@ -138,7 +93,7 @@ void play_hand(Card* hand, int* count, Card* deck, int* deck_idx, int* bet, Play
         }
         else if (move == 3) {
             if (player->balance < *bet) {
-                printf("\x1b[31mInsufficient funds to double down!\x1b[0m\n");
+                printf("" C_RED "Insufficient funds to double down!" C_RESET "\n");
                 continue;
             }
             player->balance -= *bet;
@@ -150,38 +105,38 @@ void play_hand(Card* hand, int* count, Card* deck, int* deck_idx, int* bet, Play
             print_hands(hand, *count, hand_name, 0);
 
             if (val > 21) {
-                printf("\n\x1b[31mBUST!\x1b[0m %s went over 21.\n", hand_name);
+                printf("\n" C_RED "BUST!" C_RESET " %s went over 21.\n", hand_name);
                 *busted = 1;
                 player->total_losses += *bet;
             }
             break;
         }
         else {
-            printf("\x1b[33mInvalid option.\x1b[0m\n");
+            printf("" C_YELLOW "Invalid option." C_RESET "\n");
         }
     }
 }
 
-void resolve_bets(int p_val, int p_busted, int d_val, int bet, Player* player, const char* hand_name) {
+static void resolve_bets(int p_val, int p_busted, int d_val, int bet, Player* player, const char* hand_name) {
     if (p_busted) return;
 
     printf("\n--- Result for %s ---\n", hand_name);
     if (d_val > 21) {
-        printf("\x1b[32mDealer Busts! YOU WIN $%d!\x1b[0m\n", bet * 2);
+        printf("" C_GREEN "Dealer Busts! YOU WIN $%d!" C_RESET "\n", bet * 2);
         player->balance += (bet * 2);
         player->total_winnings += bet;
     }
     else if (d_val > p_val) {
-        printf("\x1b[31mDealer Wins %d to %d.\x1b[0m\n", d_val, p_val);
+        printf("" C_RED "Dealer Wins %d to %d." C_RESET "\n", d_val, p_val);
         player->total_losses += bet;
     }
     else if (d_val < p_val) {
-        printf("\x1b[32mYOU WIN $%d! %d to %d.\x1b[0m\n", bet * 2, p_val, d_val);
+        printf("" C_GREEN "YOU WIN $%d! %d to %d." C_RESET "\n", bet * 2, p_val, d_val);
         player->balance += (bet * 2);
         player->total_winnings += bet;
     }
     else {
-        printf("\x1b[33mPUSH! It's a tie.\x1b[0m\n");
+        printf("" C_YELLOW "PUSH! It's a tie." C_RESET "\n");
         player->balance += bet;
     }
 }
@@ -189,20 +144,17 @@ void resolve_bets(int p_val, int p_busted, int d_val, int bet, Player* player, c
 void play_blackjack(Player* player) {
     int is_playing = 1;
 
-    // קריאה למסך החוקים
     print_blackjack_welcome();
 
-    // מעבר חלק ומזמין למשחק עצמו
     system("cls");
-    printf("\n\x1b[33m==================================================\x1b[0m\n");
-    printf("  \x1b[36m[Dealer]\x1b[0m Welcome to the VIP Blackjack Table, %s!\n", player->name);
-    printf("  \x1b[36m[Dealer]\x1b[0m Shuffling the 6-deck shoe...\n");
-    printf("\x1b[33m==================================================\x1b[0m\n");
-    delay_ms(2000); // השהייה קטנה שיוצרת תחושת ציפייה
+    printf("\n" C_YELLOW "==================================================" C_RESET "\n");
+    printf("  " C_CYAN "[Dealer]" C_RESET " Welcome to the VIP Blackjack Table, %s!\n", player->name);
+    printf("  " C_CYAN "[Dealer]" C_RESET " Shuffling the 6-deck shoe...\n");
+    printf("" C_YELLOW "==================================================" C_RESET "\n");
+    delay_ms(2000);
 
     while (is_playing) {
-        // שימוש בתשתית הכותרת האחידה שלנו (DRY)
-        print_table_header("BLACKJACK TABLE", "\x1b[36m", player->balance);
+        print_table_header("BLACKJACK TABLE", "" C_CYAN "", player->balance);
 
         printf("Options: [0] Leave Table  [1] Place Bet\nAction: ");
         int action = get_safe_int();
@@ -213,17 +165,17 @@ void play_blackjack(Player* player) {
         int bet1 = get_safe_int();
 
         if (bet1 <= 0 || bet1 > player->balance) {
-            printf("\x1b[31mInvalid amount or insufficient funds!\x1b[0m\n");
+            printf("" C_RED "Invalid amount or insufficient funds!" C_RESET "\n");
             continue;
         }
 
         player->balance -= bet1;
         printf("Bet of $%d placed. Dealing cards...\n", bet1);
 
-        Card* deck = create_deck();
-        shuffle_deck(deck);
+        // יצירת 6 חפיסות אמיתיות לבלאק ג'ק VIP מהמנוע הגנרי!
+        Card* deck = create_deck(6);
+        shuffle_deck(deck, 312); // 6 * 52 = 312 cards
 
-        // שימוש ב-safe_malloc לידיים
         Card* p_hand1 = (Card*)safe_malloc(11 * sizeof(Card));
         Card* p_hand2 = NULL;
         Card* d_hand = (Card*)safe_malloc(11 * sizeof(Card));
@@ -243,23 +195,23 @@ void play_blackjack(Player* player) {
         int d_val = calculate_hand_value(d_hand, d_count);
 
         if (p1_val == 21) {
-            printf("\n\x1b[32mBLACKJACK!\x1b[0m You hit 21 instantly!\n");
+            printf("\n" C_GREEN "BLACKJACK!" C_RESET " You hit 21 instantly!\n");
             print_hands(d_hand, d_count, "Dealer", 0);
 
             if (d_val == 21) {
-                printf("\x1b[33mPush (Tie).\x1b[0m Dealer also has Blackjack.\n");
+                printf("" C_YELLOW "Push (Tie)." C_RESET " Dealer also has Blackjack.\n");
                 player->balance += bet1;
             }
             else {
                 int win_amount = bet1 + (int)(bet1 * 1.5);
-                printf("\x1b[32mYou won $%d!\x1b[0m\n", (int)(bet1 * 1.5));
+                printf("" C_GREEN "You won $%d!" C_RESET "\n", (int)(bet1 * 1.5));
                 player->balance += win_amount;
                 player->total_winnings += (win_amount - bet1);
             }
         }
         else {
-            if (strcmp(p_hand1[0].rank, p_hand1[1].rank) == 0 && player->balance >= bet1) {
-                printf("\n\x1b[36mYou have a pair! Do you want to SPLIT? (Costs an additional $%d)\x1b[0m\n", bet1);
+            if (strcmp(p_hand1[0].str, p_hand1[1].str) == 0 && player->balance >= bet1) {
+                printf("\n" C_CYAN "You have a pair! Do you want to SPLIT? (Costs an additional $%d)" C_RESET "\n", bet1);
                 printf("[1] Yes, Split  [2] No, Play as one hand: ");
                 if (get_safe_int() == 1) {
                     is_split = 1;
@@ -275,7 +227,7 @@ void play_blackjack(Player* player) {
                     p_hand1[p1_count++] = deck[deck_idx++];
                     p_hand2[p2_count++] = deck[deck_idx++];
 
-                    printf("\n\x1b[36m--- HANDS SPLIT ---\x1b[0m\n");
+                    printf("\n" C_CYAN "--- HANDS SPLIT ---" C_RESET "\n");
                 }
             }
 
@@ -315,7 +267,7 @@ void play_blackjack(Player* player) {
         if (is_split) free(p_hand2);
 
         if (player->balance <= 0) {
-            printf("\n\x1b[31mYou are bankrupt! Security is escorting you out.\x1b[0m\n");
+            printf("\n" C_RED "You are bankrupt! Security is escorting you out." C_RESET "\n");
             is_playing = 0;
         }
     }

@@ -5,45 +5,22 @@
 #include "casino.h"
 #include "utils.h"
 #include <conio.h> // מאפשרת שימוש ב-_getch() לקריאת מקשים מיידית
+#include "graphics.h"
 
 // מערך של סמלים למכונת המזל
 const char* slot_symbols[] = {
-    "\x1b[31m[ 7 ]\x1b[0m", // 0: שבע אדום (ג'קפוט)
-    "\x1b[33m[ $ ]\x1b[0m", // 1: דולר זהב
-    "\x1b[32m[ # ]\x1b[0m", // 2: סולמית ירוקה
-    "\x1b[35m[ @ ]\x1b[0m", // 3: שטרודל סגול
-    "\x1b[36m[ * ]\x1b[0m"  // 4: כוכב תכלת
+    "" C_RED "[ 7 ]" C_RESET "", // 0: שבע אדום (ג'קפוט)
+    "" C_YELLOW "[ $ ]" C_RESET "", // 1: דולר זהב
+    "" C_GREEN "[ # ]" C_RESET "", // 2: סולמית ירוקה
+    "" C_MAGENTA "[ @ ]" C_RESET "", // 3: שטרודל סגול
+    "" C_CYAN "[ * ]" C_RESET ""  // 4: כוכב תכלת
 };
 
-void print_slots_welcome() {
-    system("cls");
-    printf("\x1b[33m"); // זהב
-    printf("  ____  _      ___ _____  ____  \n");
-    printf(" / ___|| |    / _ \\_   _|/ ___| \n");
-    printf(" \\___ \\| |   | | | || |  \\___ \\ \n");
-    printf("  ___) | |___| |_| || |   ___) |\n");
-    printf(" |____/|_____|\\___/ |_|  |____/ \n");
-    printf("\x1b[0m\n");
-
-    printf("\x1b[36m=========================================================================\x1b[0m\n");
-    printf("                       \x1b[33mPAYTABLE & RULES\x1b[0m\n");
-    printf("\x1b[36m=========================================================================\x1b[0m\n");
-    printf(" * THREE 7s [ 7 ][ 7 ][ 7 ] : JACKPOT! Pays 50 to 1\n");
-    printf(" * THREE of a kind          : BIG WIN! Pays 10 to 1\n");
-    printf(" * TWO 7s anywhere          : Pays 5 to 1\n");
-    printf(" * TWO of a kind            : Pays 2 to 1\n");
-    printf("\x1b[36m=========================================================================\x1b[0m\n\n");
-
-    printf("\x1b[32mPress ENTER to pull the lever...\x1b[0m");
-    wait_for_enter();
-    system("cls");
-}
-
 // פונקציה שמציירת את המכונה עם האנימציה
-void draw_slot_machine(int s1, int s2, int s3) {
+static void draw_slot_machine(int s1, int s2, int s3) {
     printf("\n");
     printf("   .-----------------------.\n");
-    printf("   |  \x1b[33mC A S I N O   S L O T\x1b[0m  |\n");
+    printf("   |  " C_YELLOW "C A S I N O   S L O T" C_RESET "  |\n");
     printf("   |-----------------------|\n");
     printf("   |                       |\n");
     printf("   |   %s %s %s  |\n", slot_symbols[s1], slot_symbols[s2], slot_symbols[s3]);
@@ -58,7 +35,7 @@ void play_slots(Player* player) {
     int bet = 0; // משתנה שיזכור את ההימור הנוכחי לאורך הסיבובים
 
     while (is_playing) {
-        print_table_header("SLOT MACHINE", "\x1b[33m", player->balance);
+        print_table_header("SLOT MACHINE", "" C_YELLOW "", player->balance);
 
         // שלב א': אם זה הסיבוב הראשון או שהחלטנו להחליף הימור
         if (bet == 0) {
@@ -67,7 +44,7 @@ void play_slots(Player* player) {
 
             if (action == 0) break;
             if (action != 1) {
-                printf("\x1b[33mInvalid option.\x1b[0m\n");
+                printf("" C_YELLOW "Invalid option." C_RESET "\n");
                 delay_ms(1000);
                 continue;
             }
@@ -82,14 +59,14 @@ void play_slots(Player* player) {
 
         // בדיקת תקינות ההימור והיתרה
         if (bet <= 0 || bet > player->balance) {
-            printf("\x1b[31mInvalid amount or insufficient funds!\x1b[0m\n");
+            printf("" C_RED "Invalid amount or insufficient funds!" C_RESET "\n");
             bet = 0; // מאפסים כדי לאלץ בחירת הימור מחדש
             delay_ms(1500);
             continue;
         }
 
         player->balance -= bet;
-        printf("\n\x1b[36mSpinning the reels...\x1b[0m\n");
+        printf("\n" C_CYAN "Spinning the reels..." C_RESET "\n");
 
         // אנימציית גלילה של מכונת המזל
         int r1, r2, r3;
@@ -110,23 +87,23 @@ void play_slots(Player* player) {
         int payout = 0;
         if (r1 == 0 && r2 == 0 && r3 == 0) {
             payout = bet * 50;
-            printf("\n\x1b[31m*** J A C K P O T ***\x1b[0m\n");
-            printf("\x1b[32mUNBELIEVABLE! You hit three 7s and won $%d!\x1b[0m\n", payout);
+            printf("\n" C_RED "*** J A C K P O T ***" C_RESET "\n");
+            printf("" C_GREEN "UNBELIEVABLE! You hit three 7s and won $%d!" C_RESET "\n", payout);
         }
         else if (r1 == r2 && r2 == r3) {
             payout = bet * 10;
-            printf("\n\x1b[32mBIG WIN! Three of a kind! You won $%d!\x1b[0m\n", payout);
+            printf("\n" C_GREEN "BIG WIN! Three of a kind! You won $%d!" C_RESET "\n", payout);
         }
         else if ((r1 == 0 && r2 == 0) || (r1 == 0 && r3 == 0) || (r2 == 0 && r3 == 0)) {
             payout = bet * 5;
-            printf("\n\x1b[32mNICE! Two 7s! You won $%d!\x1b[0m\n", payout);
+            printf("\n" C_GREEN "NICE! Two 7s! You won $%d!" C_RESET "\n", payout);
         }
         else if (r1 == r2 || r1 == r3 || r2 == r3) {
             payout = bet * 2;
-            printf("\n\x1b[32mSmall Win! Two of a kind! You won $%d!\x1b[0m\n", payout);
+            printf("\n" C_GREEN "Small Win! Two of a kind! You won $%d!" C_RESET "\n", payout);
         }
         else {
-            printf("\n\x1b[31mNo match. Better luck next pull!\x1b[0m\n");
+            printf("\n" C_RED "No match. Better luck next pull!" C_RESET "\n");
             player->total_losses += bet;
         }
 
@@ -143,9 +120,9 @@ void play_slots(Player* player) {
 
         // שלב ב': תפריט המקשים המהיר ללא לחיצה על Enter
         printf("\n--------------------------------------------------\n");
-        printf(" -> Press [\x1b[32mSPACE\x1b[0m] to spin again with the same bet ($%d)\n", bet);
-        printf(" -> Press [\x1b[33mC\x1b[0m] to change bet amount\n");
-        printf(" -> Press [\x1b[31m0\x1b[0m] to exit to main menu\n");
+        printf(" -> Press [" C_GREEN "SPACE" C_RESET "] to spin again with the same bet ($%d)\n", bet);
+        printf(" -> Press [" C_YELLOW "C" C_RESET "] to change bet amount\n");
+        printf(" -> Press [" C_RED "0" C_RESET "] to exit to main menu\n");
         printf("--------------------------------------------------\n");
 
         char key = ' ';

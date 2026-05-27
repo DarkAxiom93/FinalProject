@@ -6,12 +6,17 @@
 
 int get_safe_int() {
     int value;
+    // הלולאה הזו רצה כל עוד המשתמש לא הכניס מספר חוקי בכלל (למשל, הקליד רק אותיות)
     while (scanf("%d", &value) != 1) {
-        printf("\x1b[31mError: Invalid input.\x1b[0m Please enter a valid number: ");
+        // מנקים באגרסיביות את כל הזבל מהחוצץ עד שהמשתמש לחץ Enter
         while (getchar() != '\n');
+        printf("" C_RED "Invalid input!" C_RESET " Please enter a numeric value: ");
     }
-    // ניקוי שארית ה'אנטר' מהחוצץ כדי שלא יהרוס קלטים עתידיים
+
+    // אם המשתמש הכניס מספר חוקי אבל הוסיף זבל אחריו (למשל "100abc"),
+    // אנחנו לוקחים את ה-100, אבל מנקים את שאר הזבל כדי שלא יהרוס את הסיבוב הבא.
     while (getchar() != '\n');
+
     return value;
 }
 
@@ -27,7 +32,7 @@ void wait_for_enter() {
 }
 
 void print_animated_banner() {
-    const char* colors[] = { "\x1b[31m", "\x1b[32m", "\x1b[33m", "\x1b[34m", "\x1b[35m", "\x1b[36m" };
+    const char* colors[] = { "" C_RED "", "" C_GREEN "", "" C_YELLOW "", "\x1b[34m", "" C_MAGENTA "", "" C_CYAN "" };
     system("cls");
 
     for (int i = 0; i < 6; i++) {
@@ -48,7 +53,7 @@ void print_animated_banner() {
 
         if (i < 5) printf("\x1b[12A");
     }
-    printf("\x1b[0m");
+    printf("" C_RESET "");
 }
 
 /*
@@ -57,7 +62,7 @@ void print_animated_banner() {
  */
 void print_table_header(const char* title, const char* color, int balance) {
     printf("\n========================================\n");
-    printf("          %s%s\x1b[0m          \n", color, title);
+    printf("          %s%s" C_RESET "          \n", color, title);
     printf("Current Balance: $%d\n", balance);
     printf("========================================\n");
 }
@@ -70,7 +75,7 @@ void print_table_header(const char* title, const char* color, int balance) {
 void* safe_malloc(size_t size) {
     void* ptr = malloc(size);
     if (ptr == NULL) {
-        printf("\x1b[31mCRITICAL ERROR: Memory allocation failed!\x1b[0m\n");
+        printf("" C_RED "CRITICAL ERROR: Memory allocation failed!" C_RESET "\n");
         exit(1); // סיום מאולץ של התוכנית במקרה של חוסר זיכרון
     }
     return ptr;

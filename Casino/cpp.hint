@@ -1,0 +1,12 @@
+#define C_RESET
+#define C_RED
+#define C_GREEN
+#define C_YELLOW
+#define C_BLUE
+#define C_MAGENTA
+#define C_CYAN
+#define C_WHITE
+#define BG_BLACK
+#define BG_RED
+#define BG_GREEN
+#define TEXT_WHITE

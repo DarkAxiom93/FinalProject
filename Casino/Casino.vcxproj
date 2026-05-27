@@ -127,9 +127,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="account.c" />
     <ClCompile Include="blackjack.c" />
+    <ClCompile Include="cards.c" />
     <ClCompile Include="craps.c" />
     <ClCompile Include="football.c" />
+    <ClCompile Include="graphics.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="poker.c" />
     <ClCompile Include="roulette.c" />
@@ -138,8 +141,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="casino.h" />
+    <None Include="cpp.hint" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="account.h" />
+    <ClInclude Include="cards.h" />
+    <ClInclude Include="graphics.h" />
     <ClInclude Include="utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

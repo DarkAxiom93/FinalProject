@@ -20,12 +20,6 @@ typedef struct {
     int num_count;       // כמות המספרים השמורים במערך
 } Bet;
 
-// מבנה נתונים 3: קלף משחק (Blackjack/Poker)
-typedef struct {
-    char rank[3]; // דרגת הקלף: "2" עד "10", או "J", "Q", "K", "A"
-    char suit;    // צורה: 'H' (Hearts), 'D' (Diamonds), 'C' (Clubs), 'S' (Spades)
-    int value;    // ערך מספרי (2-11)
-} Card;
 
 // הצהרות על פונקציות מערכת מרכזיות
 void print_roulette_board();

@@ -1,7 +1,9 @@
 === CASINO PLAYER PROFILE ===
 Player_Name: Dani
 Current_Balance: $24999
+Bank_Balance: $0
 -----------------------------
 Total_Winnings: $13
 Total_Losses: $21014
 =============================
+Checksum: 154044

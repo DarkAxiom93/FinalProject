@@ -5,6 +5,7 @@
 #include <time.h>
 #include "casino.h"
 #include "utils.h"
+#include "graphics.h"
 
 #define NUM_MATCHES 3
 
@@ -27,36 +28,7 @@ const char* team_pool[] = {
 };
 #define POOL_SIZE 12
 
-void print_football_welcome() {
-    system("cls");
-    printf("\x1b[32m"); // ירוק דשא
-    printf("  _    _    _ _____ _   _ _   _ ______ _____  \n");
-    printf(" | |  | |  | |_   _| \\ | | \\ | |  ____|  __ \\ \n");
-    printf(" | |  | |  | | | | |  \\| |  \\| | |__  | |__) |\n");
-    printf(" | |  | |  | | | | | . ` | . ` |  __| |  _  / \n");
-    printf(" | |__| |__| |_| |_| |\\  | |\\  | |____| | \\ \\ \n");
-    printf("  \\_________/|_____|_| \\_|_| \\_|______|_|  \\_\\\n");
-    printf("\n             W I N N E R   S L I P         \n\x1b[0m");
-
-    printf("\x1b[36m=========================================================================\x1b[0m\n");
-    printf("                       \x1b[33mTABLE RULES & HOW TO WIN\x1b[0m\n");
-    printf("\x1b[36m=========================================================================\x1b[0m\n");
-    printf(" * You are filling a 3-match betting slip.\n");
-    printf(" * For each match, guess the outcome:\n");
-    printf("   - Press [1] for Home Team Win\n");
-    printf("   - Press [X] for a Draw\n");
-    printf("   - Press [2] for Away Team Win\n");
-    printf("   - Press [S] to SKIP this match (it won't count toward your slip)\n");
-    printf(" * Total odds multiply across all active matches on the slip!\n");
-    printf(" * To win, you must guess ALL active match outcomes correctly.\n");
-    printf("\x1b[36m=========================================================================\x1b[0m\n\n");
-
-    printf("\x1b[32mPress ENTER to get your betting slip...\x1b[0m");
-    wait_for_enter();
-    system("cls");
-}
-
-int get_match_prediction(int match_num) {
+static int get_match_prediction(int match_num) {
     char choice;
     while (1) {
         printf("Enter prediction for Match %d (1, X, 2, or S to skip): ", match_num);
@@ -70,11 +42,11 @@ int get_match_prediction(int match_num) {
         else {
             while (getchar() != '\n');
         }
-        printf("\x1b[31mInvalid choice!\x1b[0m Please enter '1', 'X', '2', or 'S'.\n");
+        printf("" C_RED "Invalid choice!" C_RESET " Please enter '1', 'X', '2', or 'S'.\n");
     }
 }
 
-const char* outcome_to_str(int outcome) {
+static const char* outcome_to_str(int outcome) {
     if (outcome == 1) return "1 (Home Win)";
     if (outcome == 2) return "X (Draw)";
     return "2 (Away Win)";
@@ -83,7 +55,7 @@ const char* outcome_to_str(int outcome) {
 void play_football(Player* player) {
     print_football_welcome();
 
-    Match slip[NUM_MATCHES];
+    Match slip[NUM_MATCHES] = { 0 };
 
     // מערך עזר למניעת בחירה כפולה של אותה קבוצה באותו טופס
     int used_indices[POOL_SIZE] = { 0 };
@@ -113,7 +85,7 @@ void play_football(Player* player) {
         slip[i].odds_2 = 1.9f + ((float)rand() / (float)RAND_MAX) * 1.5f;
     }
 
-    print_table_header("WINNER SPORTSBOOK", "\x1b[32m", player->balance);
+    print_table_header("WINNER SPORTSBOOK", "" C_GREEN "", player->balance);
 
     // הצגת טבלת המשחקים שהוגרלו
     printf("\n==================== TODAY'S WINNER SLIP ====================\n");
@@ -150,23 +122,23 @@ void play_football(Player* player) {
 
     // הגנה מפני מצב שבו המשתמש דילג על כל שלושת המשחקים
     if (active_bets_count == 0) {
-        printf("\n\x1b[33mYou skipped all matches on the slip. Returning to Main Menu...\x1b[0m\n");
+        printf("\n" C_YELLOW "You skipped all matches on the slip. Returning to Main Menu..." C_RESET "\n");
         delay_ms(2500);
         return; // יציאה חזרה לתפריט הראשי
     }
 
-    printf("\nTotal Slip Odds: \x1b[33mx%.2f\x1b[0m\n", total_slip_odds);
+    printf("\nTotal Slip Odds: " C_YELLOW "x%.2f" C_RESET "\n", total_slip_odds);
     printf("Enter your total bet on this slip: $");
     int bet = get_safe_int();
 
     if (bet <= 0 || bet > player->balance) {
-        printf("\x1b[31mInvalid amount or insufficient funds! Ticket cancelled.\x1b[0m\n");
+        printf("" C_RED "Invalid amount or insufficient funds! Ticket cancelled." C_RESET "\n");
         delay_ms(2500);
         return; // יציאה חזרה לתפריט הראשי
     }
 
     player->balance -= bet;
-    printf("\n\x1b[36mMatches are live! Simulating scores...\x1b[0m\n");
+    printf("\n" C_CYAN "Matches are live! Simulating scores..." C_RESET "\n");
     for (int i = 0; i < 4; i++) {
         printf("Goal updates coming in... %d'\n", (i + 1) * 20);
         delay_ms(700);
@@ -186,15 +158,15 @@ void play_football(Player* player) {
 
         if (slip[i].user_prediction == 0) {
             // אם המשחק דולג, הוא מסומן בסימן ניטרלי ולא משפיע על מפולת ההפסד
-            printf(" -> Result: %s | Your Pick: SKIPPED [\x1b[36m-\x1b[0m]\n", outcome_to_str(slip[i].actual_outcome));
+            printf(" -> Result: %s | Your Pick: SKIPPED [" C_CYAN "-" C_RESET "]\n", outcome_to_str(slip[i].actual_outcome));
         }
         else {
             printf(" -> Result: %s | Your Pick: %s ", outcome_to_str(slip[i].actual_outcome), outcome_to_str(slip[i].user_prediction));
             if (slip[i].user_prediction == slip[i].actual_outcome) {
-                printf("[\x1b[32mV\x1b[0m]\n");
+                printf("[" C_GREEN "V" C_RESET "]\n");
             }
             else {
-                printf("[\x1b[31mX\x1b[0m]\n");
+                printf("[" C_RED "X" C_RESET "]\n");
                 hit_all = 0; // פגיעה שנכשלה פוסלת את כל הטופס
             }
         }
@@ -204,17 +176,17 @@ void play_football(Player* player) {
     // חישוב זכיות/הפסדים
     if (hit_all) {
         int winnings = (int)(bet * total_slip_odds);
-        printf("\n\x1b[32m!!! WOW !!! YOU HIT THE WINNER SLIP !!!\x1b[0m\n");
-        printf("You won a total of \x1b[32m$%d\x1b[0m from odds of x%.2f!\n", winnings, total_slip_odds);
+        printf("\n" C_GREEN "!!! WOW !!! YOU HIT THE WINNER SLIP !!!" C_RESET "\n");
+        printf("You won a total of " C_GREEN "$%d" C_RESET " from odds of x%.2f!\n", winnings, total_slip_odds);
         player->balance += winnings;
         player->total_winnings += (winnings - bet);
     }
     else {
-        printf("\n\x1b[31mSlip busted! You missed one or more games. Better luck next week!\x1b[0m\n");
+        printf("\n" C_RED "Slip busted! You missed one or more games. Better luck next week!" C_RESET "\n");
         player->total_losses += bet;
     }
 
     // בסיום הצגת התוצאות, לחיצה על Enter תסיים את הפונקציה ותחזיר את השחקנים אוטומטית ל-main menu
-    printf("\n\x1b[33mPress ENTER to return to the Casino Main Menu...\x1b[0m");
+    printf("\n" C_YELLOW "Press ENTER to return to the Casino Main Menu..." C_RESET "");
     wait_for_enter();
 }
