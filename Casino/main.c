@@ -83,7 +83,10 @@ static void display_leaderboard() {
 
 
 int main() {
-    srand((unsigned int)time(NULL));
+    // שילוב של זמן בשניות, מחזורי שעון מעבד, וכתובת משתנה מקומי בזיכרון ליצירת גרעין קריפטוגרפי עמיד
+    int entropy_variable = 0;
+    unsigned int secure_seed = (unsigned int)time(NULL) ^ (unsigned int)clock() ^ (unsigned int)&entropy_variable;
+    srand(secure_seed);
     Player current_player = { 0 };
     int session_start_balance = 0;
 

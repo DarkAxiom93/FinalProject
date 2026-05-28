@@ -424,7 +424,8 @@ static int check_win(Bet b, int spin_result) {
     case 7:
         if (spin_result == b.numbers[0] || spin_result == b.numbers[1] ||
             spin_result == b.numbers[2] || spin_result == b.numbers[3]) {
-            is_winner = 1; payout_multiplier = 8;
+            is_winner = 1; 
+            payout_multiplier = 8;
         }
         break;
     }

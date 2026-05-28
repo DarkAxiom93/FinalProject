@@ -26,7 +26,8 @@ void load_player(Player* p) {
         fclose(file);
 
         // אימות חתימת ה-Anti Cheat
-        long expected_checksum = (p->balance * 7) + (p->bank_balance * 3) + (p->total_winnings * 5) - p->total_losses;
+        long expected_checksum = (((long)p->balance * 7919) ^ ((long)p->bank_balance * 6841)) +
+            (((long)p->total_winnings * 5039) ^ (long)p->total_losses) ^ 0xDEADBEEF;
 
         if (has_checksum && loaded_checksum != expected_checksum) {
             system("cls");
@@ -58,7 +59,8 @@ void save_player(Player* p) {
 
         // מנגנון ה-Anti Cheat: יצירת חתימה מתמטית סודית
         // הנוסחה: (יתרה * 7) + (בנק * 3) + (זכיות * 5) - הפסדים
-        long checksum = (p->balance * 7) + (p->bank_balance * 3) + (p->total_winnings * 5) - p->total_losses;
+        long checksum = (((long)p->balance * 7919) ^ ((long)p->bank_balance * 6841)) +
+            (((long)p->total_winnings * 5039) ^ (long)p->total_losses) ^ 0xDEADBEEF;
         fprintf(file, "=============================\n");
         fwrite(&checksum, sizeof(long), 1, file);
 
