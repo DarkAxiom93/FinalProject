@@ -6,6 +6,7 @@
 #include "casino.h"
 #include "utils.h"
 #include "graphics.h"
+#include "account.h"
 
 #define MAX_BETS_PER_SPIN 10
 
@@ -485,8 +486,12 @@ void play_roulette(Player* player) {
                 printf(C_RED "Invalid amount or insufficient funds!" C_RESET "\n");
                 continue;
             }
-
+            if (current_bet.amount > MAX_BET) {
+                printf(C_RED "Table maximum bet is $%d!" C_RESET "\n", MAX_BET);
+                continue;
+            }
             player->balance -= current_bet.amount;
+            save_player(player);
             active_bets[num_active_bets] = current_bet;
             num_active_bets++;
             printf(C_GREEN "Bet placed successfully!" C_RESET " New balance: $%d\n", player->balance);
@@ -497,6 +502,7 @@ void play_roulette(Player* player) {
         else if (action == 4 && num_active_bets > 0) {
             num_active_bets--;
             player->balance += active_bets[num_active_bets].amount;
+            save_player(player);
             printf("\n" C_GREEN "Last bet cancelled successfully. $%d refunded." C_RESET "\n", active_bets[num_active_bets].amount);
             delay_ms(1500);
         }
@@ -552,6 +558,7 @@ void play_roulette(Player* player) {
                 printf(C_RED "All bets lost this round." C_RESET "\n");
             }
 
+            save_player(player);
             num_active_bets = 0;
 
             if (player->balance <= 0) {

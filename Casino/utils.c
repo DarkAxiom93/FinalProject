@@ -7,10 +7,10 @@
 int get_safe_int() {
     int value;
     // הלולאה הזו רצה כל עוד המשתמש לא הכניס מספר חוקי בכלל (למשל, הקליד רק אותיות)
-    while (scanf("%d", &value) != 1) {
+    while (scanf("%d", &value) != 1 || value < 0) {
         // מנקים באגרסיביות את כל הזבל מהחוצץ עד שהמשתמש לחץ Enter
         while (getchar() != '\n');
-        printf("" C_RED "Invalid input!" C_RESET " Please enter a numeric value: ");
+        printf("" C_RED "Invalid input!" C_RESET " Please enter a positive numeric value: ");
     }
 
     // אם המשתמש הכניס מספר חוקי אבל הוסיף זבל אחריו (למשל "100abc"),

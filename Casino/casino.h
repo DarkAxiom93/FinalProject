@@ -2,6 +2,7 @@
 #define CASINO_H
 
 #define MAX_NAME_LEN 50
+#define MAX_BET 10000
 
 // מבנה נתונים 1: ניהול שחקן (עונה על דרישת חובה ל-structs)
 typedef struct {

@@ -7,6 +7,7 @@
 #include "utils.h"
 #include "graphics.h"
 #include "cards.h"
+#include "account.h"
 
 // הלוגיקה מתרגמת את ערכי הפוקר האוניברסליים לערכי בלאק-ג'ק
 static int calculate_hand_value(Card* hand, int count) {
@@ -97,6 +98,7 @@ static void play_hand(Card* hand, int* count, Card* deck, int* deck_idx, int* be
                 continue;
             }
             player->balance -= *bet;
+            save_player(player);
             *bet *= 2;
             printf("[%s] Bet doubled to $%d.\n", hand_name, *bet);
 
@@ -168,8 +170,12 @@ void play_blackjack(Player* player) {
             printf("" C_RED "Invalid amount or insufficient funds!" C_RESET "\n");
             continue;
         }
-
+        if (bet1 > MAX_BET) {
+            printf("" C_RED "Table maximum bet is $%d!" C_RESET "\n", MAX_BET);
+            continue;
+        }
         player->balance -= bet1;
+        save_player(player);
         printf("Bet of $%d placed. Dealing cards...\n", bet1);
 
         // יצירת 6 חפיסות אמיתיות לבלאק ג'ק VIP מהמנוע הגנרי!
@@ -217,6 +223,7 @@ void play_blackjack(Player* player) {
                     is_split = 1;
                     bet2 = bet1;
                     player->balance -= bet2;
+                    save_player(player);
 
                     p_hand2 = (Card*)safe_malloc(11 * sizeof(Card));
 
@@ -260,6 +267,7 @@ void play_blackjack(Player* player) {
                 }
             }
         }
+        save_player(player);
 
         free(deck);
         free(p_hand1);

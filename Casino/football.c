@@ -6,6 +6,7 @@
 #include "casino.h"
 #include "utils.h"
 #include "graphics.h"
+#include "account.h"
 
 #define NUM_MATCHES 3
 
@@ -92,8 +93,8 @@ void play_football(Player* player) {
     printf(" # | MATCH                             |  (1)  |  (X)  |  (2)  \n");
     printf("-------------------------------------------------------------\n");
     for (int i = 0; i < NUM_MATCHES; i++) {
-        char match_line[60];
-        sprintf(match_line, "%s vs %s", slip[i].home_team, slip[i].away_team);
+        char match_line[100];
+        snprintf(match_line, sizeof(match_line), "%s vs %s", slip[i].home_team, slip[i].away_team);
         printf(" %d | %-33s | %.2f  | %.2f  | %.2f \n", i + 1, match_line, slip[i].odds_1, slip[i].odds_X, slip[i].odds_2);
     }
     printf("=============================================================\n\n");
@@ -137,7 +138,14 @@ void play_football(Player* player) {
         return; // יציאה חזרה לתפריט הראשי
     }
 
+    if (bet > MAX_BET) {
+        printf("" C_RED "Sportsbook maximum bet is $%d! Ticket cancelled." C_RESET "\n", MAX_BET);
+        delay_ms(2500);
+        return;
+    }
+
     player->balance -= bet;
+    save_player(player);
     printf("\n" C_CYAN "Matches are live! Simulating scores..." C_RESET "\n");
     for (int i = 0; i < 4; i++) {
         printf("Goal updates coming in... %d'\n", (i + 1) * 20);
@@ -185,6 +193,8 @@ void play_football(Player* player) {
         printf("\n" C_RED "Slip busted! You missed one or more games. Better luck next week!" C_RESET "\n");
         player->total_losses += bet;
     }
+
+    save_player(player);
 
     // בסיום הצגת התוצאות, לחיצה על Enter תסיים את הפונקציה ותחזיר את השחקנים אוטומטית ל-main menu
     printf("\n" C_YELLOW "Press ENTER to return to the Casino Main Menu..." C_RESET "");

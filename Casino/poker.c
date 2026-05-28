@@ -7,6 +7,7 @@
 #include "utils.h"
 #include "graphics.h"
 #include "cards.h"
+#include "account.h"
 
 static int evaluate_poker_hand(Card hand[], int count) {
     int ranks[15] = { 0 };
@@ -127,8 +128,12 @@ void play_poker(Player* player) {
             printf("" C_RED "Invalid amounts or insufficient funds!" C_RESET "\n");
             continue;
         }
-
+        if (total_initial_bet > MAX_BET) {
+            printf("" C_RED "Table maximum total initial bet is $%d!" C_RESET "\n", MAX_BET);
+            continue;
+        }
         player->balance -= total_initial_bet;
+        save_player(player);
         int play_bet = 0;
         int has_folded = 0;
 
@@ -166,6 +171,7 @@ void play_poker(Player* player) {
             else {
                 play_bet = ante * mult;
                 player->balance -= play_bet;
+                save_player(player);
                 printf("" C_GREEN "Play bet of $%d placed." C_RESET "\n", play_bet);
             }
         }
@@ -191,6 +197,7 @@ void play_poker(Player* player) {
                 else {
                     play_bet = ante * 2;
                     player->balance -= play_bet;
+                    save_player(player);
                     printf("" C_GREEN "Play bet of $%d placed." C_RESET "\n", play_bet);
                 }
             }
@@ -224,6 +231,7 @@ void play_poker(Player* player) {
                 else {
                     play_bet = ante;
                     player->balance -= play_bet;
+                    save_player(player);
                     printf("" C_GREEN "Play bet of $%d placed." C_RESET "\n", play_bet);
                 }
             }
@@ -293,7 +301,7 @@ void play_poker(Player* player) {
                 player->balance += (ante + blind + play_bet);
             }
         }
-
+        save_player(player);
         // חשוב! מניעת דליפת זיכרון בסוף הסיבוב
         free(deck);
 

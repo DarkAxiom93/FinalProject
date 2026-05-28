@@ -6,6 +6,7 @@
 #include "utils.h"
 #include <conio.h> // מאפשרת שימוש ב-_getch() לקריאת מקשים מיידית
 #include "graphics.h"
+#include "account.h"
 
 // מערך של סמלים למכונת המזל
 const char* slot_symbols[] = {
@@ -65,7 +66,15 @@ void play_slots(Player* player) {
             continue;
         }
 
+        if (bet > MAX_BET) {
+            printf("" C_RED "Machine maximum bet is $%d!" C_RESET "\n", MAX_BET);
+            bet = 0; // קריטי לאפס גם כאן כדי לדרוש הימור חדש!
+            delay_ms(1500);
+            continue;
+        }
+
         player->balance -= bet;
+        save_player(player);
         printf("\n" C_CYAN "Spinning the reels..." C_RESET "\n");
 
         // אנימציית גלילה של מכונת המזל
@@ -111,6 +120,8 @@ void play_slots(Player* player) {
             player->balance += payout;
             player->total_winnings += (payout - bet);
         }
+
+        save_player(player);
 
         // בדיקת פשיטת רגל (אם היתרה התאפסה, המנוע של main יטפל בזה)
         if (player->balance <= 0) {
