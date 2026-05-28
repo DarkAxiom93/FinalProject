@@ -1,9 +1,0 @@
-=== CASINO PLAYER PROFILE ===
-Player_Name: Mot
-Current_Balance: $1000
-Bank_Balance: $0
------------------------------
-Total_Winnings: $0
-Total_Losses: $0
-=============================
-Checksum: 7000

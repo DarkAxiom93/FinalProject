@@ -10,4 +10,4 @@ void handle_withdrawal(Player* p);
 void handle_deposit(Player* p);
 void admin_panel(Player* p);
 
-#endif#pragma once
+#endif

@@ -8,4 +8,4 @@ void print_poker_welcome();
 void print_slots_welcome();
 void print_football_welcome();
 
-#endif#pragma once
+#endif

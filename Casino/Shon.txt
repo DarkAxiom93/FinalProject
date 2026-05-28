@@ -1,7 +1,0 @@
-=== CASINO PLAYER PROFILE ===
-Player_Name: Shon
-Current_Balance: $920
------------------------------
-Total_Winnings: $10
-Total_Losses: $90
-=============================

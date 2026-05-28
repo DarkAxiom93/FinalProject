@@ -1,5 +1,1 @@
-Mot 98000
-Dani 24999
-Kuki 10623
-Sarit 1000
-Shon 920
+Kuki 5000

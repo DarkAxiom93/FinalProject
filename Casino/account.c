@@ -13,18 +13,16 @@ void load_player(Player* p) {
     long loaded_checksum = 0;
     int has_checksum = 0;
 
-    char filename[MAX_NAME_LEN + 5]; sprintf(filename, "%s.txt", p->name);
-    FILE* file = fopen(filename, "r");
+    char filename[MAX_NAME_LEN + 5]; 
+    snprintf(filename, sizeof(filename), "%s.bin", p->name);
+    FILE* file = fopen(filename, "rb");
     if (file != NULL) {
-        char buffer[256];
-        while (fgets(buffer, sizeof(buffer), file)) {
-            if (strstr(buffer, "Player_Name:")) { if (sscanf(buffer, "Player_Name: %s", p->name) == 1) {} }
-            else if (strstr(buffer, "Current_Balance:")) { if (sscanf(buffer, "Current_Balance: $%d", &p->balance) == 1) {} }
-            else if (strstr(buffer, "Bank_Balance:")) { if (sscanf(buffer, "Bank_Balance: $%d", &p->bank_balance) == 1) {} }
-            else if (strstr(buffer, "Total_Winnings:")) { if (sscanf(buffer, "Total_Winnings: $%d", &p->total_winnings) == 1) {} }
-            else if (strstr(buffer, "Total_Losses:")) { if (sscanf(buffer, "Total_Losses: $%d", &p->total_losses) == 1) {} }
-            else if (strstr(buffer, "Checksum:")) { if (sscanf(buffer, "Checksum: %ld", &loaded_checksum) == 1) { has_checksum = 1; } }
-        }
+        // 1. קריאת כל מבנה השחקן במכה אחת ישר לתוך המצביע p
+        fread(p, sizeof(Player), 1, file);
+
+        // 2. קריאת חתימת ה-Anti Cheat שנשמרה
+        long loaded_checksum = 0;
+        fread(&loaded_checksum, sizeof(long), 1, file);
         fclose(file);
 
         // אימות חתימת ה-Anti Cheat
@@ -52,22 +50,17 @@ void load_player(Player* p) {
 }
 
 void save_player(Player* p) {
-    char filename[MAX_NAME_LEN + 5]; sprintf(filename, "%s.txt", p->name);
-    FILE* file = fopen(filename, "w");
+    char filename[MAX_NAME_LEN + 5]; 
+    snprintf(filename, sizeof(filename), "%s.bin", p->name);
+    FILE* file = fopen(filename, "wb");
     if (file != NULL) {
-        fprintf(file, "=== CASINO PLAYER PROFILE ===\n");
-        fprintf(file, "Player_Name: %s\n", p->name);
-        fprintf(file, "Current_Balance: $%d\n", p->balance);
-        fprintf(file, "Bank_Balance: $%d\n", p->bank_balance);
-        fprintf(file, "-----------------------------\n");
-        fprintf(file, "Total_Winnings: $%d\n", p->total_winnings);
-        fprintf(file, "Total_Losses: $%d\n", p->total_losses);
+        fwrite(p, sizeof(Player), 1, file);
 
         // מנגנון ה-Anti Cheat: יצירת חתימה מתמטית סודית
         // הנוסחה: (יתרה * 7) + (בנק * 3) + (זכיות * 5) - הפסדים
         long checksum = (p->balance * 7) + (p->bank_balance * 3) + (p->total_winnings * 5) - p->total_losses;
         fprintf(file, "=============================\n");
-        fprintf(file, "Checksum: %ld\n", checksum);
+        fwrite(&checksum, sizeof(long), 1, file);
 
         fclose(file);
     }
@@ -165,9 +158,6 @@ void handle_deposit(Player* p) {
 // ==========================================
 // פאנל ניהול סודי - גישת מפתחים בלבד
 // ==========================================
-// ==========================================
-// פאנל ניהול סודי - גישת מפתחים בלבד
-// ==========================================
 void admin_panel(Player* p) {
     system("cls");
     printf("\x1b[41m\x1b[97m SYSTEM RESTRICTED AREA " C_RESET "\n");
@@ -226,14 +216,34 @@ void admin_panel(Player* p) {
             char target[MAX_NAME_LEN];
             if (scanf("%49s", target) == 1) {
                 while (getchar() != '\n');
-                char fname[MAX_NAME_LEN + 5]; sprintf(fname, "%s.txt", target);
-                FILE* f = fopen(fname, "r");
+                char fname[MAX_NAME_LEN + 5];
+
+                // פונה לקובץ ה-.bin החדש
+                snprintf(fname, sizeof(fname), "%s.bin", target);
+
+                // פותח לקריאה בינארית
+                FILE* f = fopen(fname, "rb");
+
                 if (f) {
-                    printf("\n" C_CYAN "--- SECURE AUDIT REPORT: %s ---" C_RESET "\n", target);
-                    char line[256];
-                    while (fgets(line, sizeof(line), f)) printf("  %s", line);
+                    Player audited_player;
+                    long audited_checksum;
+
+                    // שואב את הנתונים מהבינארי
+                    fread(&audited_player, sizeof(Player), 1, f);
+                    fread(&audited_checksum, sizeof(long), 1, f);
                     fclose(f);
-                    printf("" C_CYAN "---------------------------------------" C_RESET "\n");
+
+                    // מדפיס למסך
+                    printf("\n" C_CYAN "--- SECURE AUDIT REPORT: %s ---" C_RESET "\n", audited_player.name);
+                    printf("  Player_Name:     %s\n", audited_player.name);
+                    printf("  Current_Balance: $%d\n", audited_player.balance);
+                    printf("  Bank_Balance:    $%d\n", audited_player.bank_balance);
+                    printf("  -----------------------------\n");
+                    printf("  Total_Winnings:  $%d\n", audited_player.total_winnings);
+                    printf("  Total_Losses:    $%d\n", audited_player.total_losses);
+                    printf("  =============================\n");
+                    printf("  Checksum:        %ld\n", audited_checksum);
+                    printf(C_CYAN "---------------------------------------" C_RESET "\n");
                 }
                 else {
                     printf("" C_RED "Record not found for player: %s" C_RESET "\n", target);
