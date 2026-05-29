@@ -1,13 +1,12 @@
 ﻿#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "cards.h"
 #include "utils.h"
 
 // ייצור חפיסות קלפים דינמי (מקבל כמה חפיסות שרוצים - 1 לפוקר, 6 לבלאק ג'ק)
-Card* create_deck(int num_decks) {
-    size_t total_cards = (size_t)num_decks * 52;
-    Card* deck = (Card*)safe_malloc(total_cards * sizeof(Card));
+void init_deck(Card* deck, int num_decks) {
     char suits[] = { 'H', 'D', 'C', 'S' };
     char* ranks_str[] = { "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A" };
 
@@ -22,7 +21,6 @@ Card* create_deck(int num_decks) {
             }
         }
     }
-    return deck;
 }
 
 // אלגוריתם ערבוב מקצועי (Fisher-Yates Shuffle)
@@ -33,4 +31,36 @@ void shuffle_deck(Card* deck, int total_cards) {
         deck[i] = deck[r];
         deck[r] = temp;
     }
+}
+void print_cards_ascii(Card* hand, int count, const char* title, int hide_second) {
+    if (title != NULL) printf("\n--- %s ---\n", title);
+
+    for (int i = 0; i < count; i++) printf("+-------+ ");
+    printf("\n");
+
+    for (int i = 0; i < count; i++) {
+        if (hide_second && i == 1) printf("|#######| ");
+        else printf("| %-2s    | ", hand[i].str);
+    }
+    printf("\n");
+
+    for (int i = 0; i < count; i++) {
+        if (hide_second && i == 1) printf("|#######| ");
+        else {
+            if (hand[i].suit == 'H' || hand[i].suit == 'D')
+                printf("|   \x1b[31m%c\x1b[0m   | ", hand[i].suit);
+            else
+                printf("|   \x1b[97m%c\x1b[0m   | ", hand[i].suit);
+        }
+    }
+    printf("\n");
+
+    for (int i = 0; i < count; i++) {
+        if (hide_second && i == 1) printf("|#######| ");
+        else printf("|    %2s | ", hand[i].str);
+    }
+    printf("\n");
+
+    for (int i = 0; i < count; i++) printf("+-------+ ");
+    printf("\n");
 }

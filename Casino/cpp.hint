@@ -10,3 +10,5 @@
 #define BG_RED
 #define BG_GREEN
 #define TEXT_WHITE
+#define RESET
+#define MAX_BET

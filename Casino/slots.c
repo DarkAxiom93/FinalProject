@@ -60,16 +60,14 @@ void play_slots(Player* player) {
 
         // בדיקת תקינות ההימור והיתרה
         if (bet <= 0 || bet > player->balance) {
-            printf("" C_RED "Invalid amount or insufficient funds!" C_RESET "\n");
-            bet = 0; // מאפסים כדי לאלץ בחירת הימור מחדש
-            delay_ms(1500);
+            display_error(1500, "Invalid amount or insufficient funds!");
+            bet = 0;
             continue;
         }
 
         if (bet > MAX_BET) {
-            printf("" C_RED "Machine maximum bet is $%d!" C_RESET "\n", MAX_BET);
-            bet = 0; // קריטי לאפס גם כאן כדי לדרוש הימור חדש!
-            delay_ms(1500);
+            display_error(1500, "Machine maximum bet is $%d!", MAX_BET);
+            bet = 0;
             continue;
         }
 
@@ -77,19 +75,24 @@ void play_slots(Player* player) {
         save_player(player);
         printf("\n" C_CYAN "Spinning the reels..." C_RESET "\n");
 
-        // אנימציית גלילה של מכונת המזל
+        // אנימציית גלילה מבוססת מנוע ויזואלי - אינה פולטת נתונים על המחולל הראשי
         int r1, r2, r3;
         for (int i = 0; i < 15; i++) {
-            r1 = rand() % 5;
-            r2 = rand() % 5;
-            r3 = rand() % 5;
+            r1 = visual_rand() % 5;
+            r2 = visual_rand() % 5;
+            r3 = visual_rand() % 5;
             printf("\r   [ %s %s %s ]   ", slot_symbols[r1], slot_symbols[r2], slot_symbols[r3]);
             fflush(stdout);
             delay_ms(80 + (i * 10));
         }
         printf("\n");
 
-        // הצגת התוצאה הסופית
+        // הגרלת התוצאה האמיתית מתוך הליבה המאובטחת
+        r1 = rand() % 5;
+        r2 = rand() % 5;
+        r3 = rand() % 5;
+
+        // הצגת התוצאה הסופית הקובעת
         draw_slot_machine(r1, r2, r3);
 
         // חישוב זכיות
@@ -136,9 +139,13 @@ void play_slots(Player* player) {
         printf(" -> Press [" C_RED "0" C_RESET "] to exit to main menu\n");
         printf("--------------------------------------------------\n");
 
+        while (_kbhit()) {
+            (void)_getch();
+        }
+
         char key = ' ';
         while (1) {
-            key = _getch(); // קליטת מקש בודד מיידית
+            key = (char)_getch(); // קליטת מקש בודד מיידית
             if (key == ' ' || key == 'c' || key == 'C' || key == '0') {
                 break; // יציאה מלולאת ההמתנה למקש חוקי
             }

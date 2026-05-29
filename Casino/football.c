@@ -133,14 +133,12 @@ void play_football(Player* player) {
     int bet = get_safe_int();
 
     if (bet <= 0 || bet > player->balance) {
-        printf("" C_RED "Invalid amount or insufficient funds! Ticket cancelled." C_RESET "\n");
-        delay_ms(2500);
-        return; // יציאה חזרה לתפריט הראשי
+        display_error(2500, "Invalid amount or insufficient funds! Ticket cancelled.");
+        return;
     }
 
     if (bet > MAX_BET) {
-        printf("" C_RED "Sportsbook maximum bet is $%d! Ticket cancelled." C_RESET "\n", MAX_BET);
-        delay_ms(2500);
+        display_error(2500, "Sportsbook maximum bet is $%d! Ticket cancelled.", MAX_BET);
         return;
     }
 
@@ -197,6 +195,5 @@ void play_football(Player* player) {
     save_player(player);
 
     // בסיום הצגת התוצאות, לחיצה על Enter תסיים את הפונקציה ותחזיר את השחקנים אוטומטית ל-main menu
-    printf("\n" C_YELLOW "Press ENTER to return to the Casino Main Menu..." C_RESET "");
-    wait_for_enter();
+    prompt_continue("Press ENTER to return to the Casino Main Menu...");
 }

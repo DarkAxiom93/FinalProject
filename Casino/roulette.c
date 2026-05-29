@@ -150,9 +150,206 @@ static int get_roulette_number() {
     return -1;
 }
 
+static Bet handle_straight_bet() {
+    Bet new_bet = { 0 };
+    printf("Enter a number (0-36, or 00): ");
+    int num = get_roulette_number();
+    if (num == -1) {
+        printf("" C_RED "Error: Invalid roulette number!" C_RESET "\n");
+        return new_bet;
+    }
+    new_bet.numbers[0] = num;
+    new_bet.num_count = 1;
+    new_bet.bet_type = 1;
+    return new_bet;
+}
+
+static Bet handle_split_corner_bet() {
+    Bet new_bet = { 0 };
+    printf("Enter FIRST number for the split (0-36, or 00): ");
+    int first_num = get_roulette_number();
+    if (first_num == -1) {
+        printf("" C_RED "Error: Invalid roulette number." C_RESET "\n");
+        return new_bet;
+    }
+    new_bet.numbers[0] = first_num;
+
+    int valid_options[8] = { 0 };
+    int valid_count = 0;
+
+    if (first_num == 0) {
+        valid_options[valid_count++] = 1; valid_options[valid_count++] = 2;
+        valid_options[valid_count++] = 3; valid_options[valid_count++] = 37;
+    }
+    else if (first_num == 37) {
+        valid_options[valid_count++] = 1; valid_options[valid_count++] = 2;
+        valid_options[valid_count++] = 3; valid_options[valid_count++] = 0;
+    }
+    else {
+        if (first_num - 3 >= 1) valid_options[valid_count++] = first_num - 3;
+        if (first_num + 3 <= 36) valid_options[valid_count++] = first_num + 3;
+        if (first_num % 3 != 1) valid_options[valid_count++] = first_num - 1;
+        if (first_num % 3 != 0) valid_options[valid_count++] = first_num + 1;
+        if (first_num <= 3) { valid_options[valid_count++] = 0; valid_options[valid_count++] = 37; }
+    }
+
+    if (first_num == 37) printf("Valid adjacent numbers for 00 are: ");
+    else printf("Valid adjacent numbers for %d are: ", first_num);
+
+    for (int i = 0; i < valid_count; i++) {
+        if (valid_options[i] == 37) printf("[00] ");
+        else printf("[%d] ", valid_options[i]);
+    }
+
+    printf("\nSelect the SECOND number from the list above: ");
+    int second_num = get_roulette_number();
+
+    int is_valid = 0;
+    for (int i = 0; i < valid_count; i++) {
+        if (second_num == valid_options[i]) { is_valid = 1; break; }
+    }
+    if (!is_valid) {
+        printf("" C_RED "Error: Number not adjacent on the board!" C_RESET "\n");
+        return new_bet;
+    }
+
+    new_bet.numbers[1] = second_num;
+    new_bet.num_count = 2;
+    new_bet.bet_type = 2;
+
+    int min_n = first_num < second_num ? first_num : second_num;
+    int max_n = first_num > second_num ? first_num : second_num;
+
+    if (min_n != 0 && min_n != 37 && max_n != 0 && max_n != 37) {
+        char expand_choice = ' ';
+        while (1) {
+            printf("\n" C_CYAN "Expand this split into a 4-number Corner bet? (Y/N):" C_RESET " ");
+            if (scanf(" %c", &expand_choice) == 1) {
+                while (getchar() != '\n');
+                if (expand_choice == 'Y' || expand_choice == 'y' || expand_choice == 'N' || expand_choice == 'n') {
+                    break;
+                }
+            }
+            else {
+                while (getchar() != '\n');
+            }
+            printf("" C_RED "Invalid input!" C_RESET " Please press Only Y for Yes or N for No.\n");
+        }
+
+        if (expand_choice == 'Y' || expand_choice == 'y') {
+            int valid_corners[2][4] = { 0 };
+            int corner_count = 0;
+
+            if (max_n - min_n == 1) {
+                if (min_n > 3) {
+                    valid_corners[corner_count][0] = min_n - 3; valid_corners[corner_count][1] = max_n - 3;
+                    valid_corners[corner_count][2] = min_n;     valid_corners[corner_count][3] = max_n;
+                    corner_count++;
+                }
+                if (max_n <= 33) {
+                    valid_corners[corner_count][0] = min_n;     valid_corners[corner_count][1] = max_n;
+                    valid_corners[corner_count][2] = min_n + 3; valid_corners[corner_count][3] = max_n + 3;
+                    corner_count++;
+                }
+            }
+            else if (max_n - min_n == 3) {
+                if (min_n % 3 != 1) {
+                    valid_corners[corner_count][0] = min_n - 1; valid_corners[corner_count][1] = max_n - 1;
+                    valid_corners[corner_count][2] = min_n;     valid_corners[corner_count][3] = max_n;
+                    corner_count++;
+                }
+                if (max_n % 3 != 0) {
+                    valid_corners[corner_count][0] = min_n;     valid_corners[corner_count][1] = max_n;
+                    valid_corners[corner_count][2] = min_n + 1; valid_corners[corner_count][3] = max_n + 1;
+                    corner_count++;
+                }
+            }
+
+            if (corner_count > 0) {
+                printf("Available Corners based on your split:\n");
+                for (int c = 0; c < corner_count; c++) {
+                    printf("[%d]: [%d, %d, %d, %d]\n", c + 1, valid_corners[c][0], valid_corners[c][1], valid_corners[c][2], valid_corners[c][3]);
+                }
+                while (1) {
+                    printf("Select corner option (1");
+                    if (corner_count == 2) printf(" or 2");
+                    printf(", or 0 to cancel expansion and keep original split): ");
+                    int corner_choice = get_safe_int();
+
+                    if (corner_choice == 0) {
+                        printf("Expansion cancelled. Keeping original Split bet.\n");
+                        break;
+                    }
+                    if (corner_choice > 0 && corner_choice <= corner_count) {
+                        int sel = corner_choice - 1;
+                        new_bet.numbers[0] = valid_corners[sel][0];
+                        new_bet.numbers[1] = valid_corners[sel][1];
+                        new_bet.numbers[2] = valid_corners[sel][2];
+                        new_bet.numbers[3] = valid_corners[sel][3];
+                        new_bet.num_count = 4;
+                        new_bet.bet_type = 7;
+                        printf("" C_GREEN "Upgraded to Corner Bet!" C_RESET "\n");
+                        break;
+                    }
+                    printf("" C_RED "Invalid option!" C_RESET " Please try again.\n");
+                }
+            }
+        }
+    }
+    return new_bet;
+}
+
+static Bet handle_dozen_bet() {
+    Bet new_bet = { 0 };
+    printf("Choose Dozen (" C_WHITE "A" C_RESET " = 1-12, " C_WHITE "B" C_RESET " = 13-24, " C_WHITE "C" C_RESET " = 25-36): ");
+    char dozen_choice;
+    if (scanf(" %c", &dozen_choice) != 1) {
+        printf("" C_RED "Invalid input format." C_RESET "\n");
+        while (getchar() != '\n'); return new_bet;
+    }
+    while (getchar() != '\n');
+    if (dozen_choice == 'A' || dozen_choice == 'a') new_bet.numbers[0] = 1;
+    else if (dozen_choice == 'B' || dozen_choice == 'b') new_bet.numbers[0] = 2;
+    else if (dozen_choice == 'C' || dozen_choice == 'c') new_bet.numbers[0] = 3;
+    else { printf("" C_RED "Error: Invalid choice!" C_RESET "\n"); return new_bet; }
+    new_bet.num_count = 1; new_bet.bet_type = 3;
+    return new_bet;
+}
+
+static Bet handle_color_bet() {
+    Bet new_bet = { 0 };
+    printf("Choose color (" C_RED "R" C_RESET " for Red, " C_WHITE "B" C_RESET " for Black): ");
+    char color_choice;
+    if (scanf(" %c", &color_choice) != 1) {
+        printf("" C_RED "Invalid input format." C_RESET "\n");
+        while (getchar() != '\n'); return new_bet;
+    }
+    while (getchar() != '\n');
+    if (color_choice == 'R' || color_choice == 'r') new_bet.numbers[0] = 1;
+    else if (color_choice == 'B' || color_choice == 'b') new_bet.numbers[0] = 2;
+    else { printf("" C_RED "Error: Invalid choice!" C_RESET "\n"); return new_bet; }
+    new_bet.num_count = 1; new_bet.bet_type = 4;
+    return new_bet;
+}
+
+static Bet handle_parity_bet() {
+    Bet new_bet = { 0 };
+    printf("Choose (" C_WHITE "E" C_RESET " for Even, " C_WHITE "O" C_RESET " for Odd): ");
+    char parity_choice;
+    if (scanf(" %c", &parity_choice) != 1) {
+        printf("" C_RED "Invalid input format." C_RESET "\n");
+        while (getchar() != '\n'); return new_bet;
+    }
+    while (getchar() != '\n');
+    if (parity_choice == 'E' || parity_choice == 'e') new_bet.numbers[0] = 1;
+    else if (parity_choice == 'O' || parity_choice == 'o') new_bet.numbers[0] = 2;
+    else { printf("" C_RED "Error: Invalid choice!" C_RESET "\n"); return new_bet; }
+    new_bet.num_count = 1; new_bet.bet_type = 5;
+    return new_bet;
+}
+
 static Bet place_bet() {
     Bet new_bet = { 0 };
-    new_bet.bet_type = 0;
 
     printf("\n--- SELECT BET TYPE ---\n");
     printf("1. Straight Up (1 Number)       [Pays 35:1]\n");
@@ -167,215 +364,33 @@ static Bet place_bet() {
 
     switch (bet_choice) {
     case 1:
-        printf("Enter a number (0-36, or 00): ");
-        int num = get_roulette_number();
-        if (num == -1) {
-            printf(C_RED "Error: Invalid roulette number!" C_RESET "\n");
-            return new_bet;
-        }
-        new_bet.numbers[0] = num;
-        new_bet.num_count = 1;
-        new_bet.bet_type = 1;
+        new_bet = handle_straight_bet();
         break;
-
     case 2:
-    {
-        printf("Enter FIRST number for the split (0-36, or 00): ");
-        int first_num = get_roulette_number();
-        if (first_num == -1) {
-            printf(C_RED "Error: Invalid roulette number." C_RESET "\n");
-            return new_bet;
-        }
-        new_bet.numbers[0] = first_num;
-
-        int valid_options[8] = { 0 };
-        int valid_count = 0;
-
-        if (first_num == 0) {
-            valid_options[valid_count++] = 1; valid_options[valid_count++] = 2;
-            valid_options[valid_count++] = 3; valid_options[valid_count++] = 37;
-        }
-        else if (first_num == 37) {
-            valid_options[valid_count++] = 1; valid_options[valid_count++] = 2;
-            valid_options[valid_count++] = 3; valid_options[valid_count++] = 0;
-        }
-        else {
-            if (first_num - 3 >= 1) valid_options[valid_count++] = first_num - 3;
-            if (first_num + 3 <= 36) valid_options[valid_count++] = first_num + 3;
-            if (first_num % 3 != 1) valid_options[valid_count++] = first_num - 1;
-            if (first_num % 3 != 0) valid_options[valid_count++] = first_num + 1;
-            if (first_num <= 3) { valid_options[valid_count++] = 0; valid_options[valid_count++] = 37; }
-        }
-
-        if (first_num == 37) printf("Valid adjacent numbers for 00 are: ");
-        else printf("Valid adjacent numbers for %d are: ", first_num);
-
-        for (int i = 0; i < valid_count; i++) {
-            if (valid_options[i] == 37) printf("[00] ");
-            else printf("[%d] ", valid_options[i]);
-        }
-
-        printf("\nSelect the SECOND number from the list above: ");
-        int second_num = get_roulette_number();
-
-        int is_valid = 0;
-        for (int i = 0; i < valid_count; i++) {
-            if (second_num == valid_options[i]) { is_valid = 1; break; }
-        }
-        if (!is_valid) {
-            printf(C_RED "Error: Number not adjacent on the board!" C_RESET "\n");
-            return new_bet;
-        }
-
-        new_bet.numbers[1] = second_num;
-        new_bet.num_count = 2;
-        new_bet.bet_type = 2;
-
-        int min_n = first_num < second_num ? first_num : second_num;
-        int max_n = first_num > second_num ? first_num : second_num;
-
-        if (min_n != 0 && min_n != 37 && max_n != 0 && max_n != 37) {
-            char expand_choice = ' ';
-
-            while (1) {
-                printf("\n" C_CYAN "Expand this split into a 4-number Corner bet? (Y/N):" C_RESET " ");
-                if (scanf(" %c", &expand_choice) == 1) {
-                    while (getchar() != '\n');
-                    if (expand_choice == 'Y' || expand_choice == 'y' || expand_choice == 'N' || expand_choice == 'n') {
-                        break;
-                    }
-                }
-                else {
-                    while (getchar() != '\n');
-                }
-                printf(C_RED "Invalid input!" C_RESET " Please press Only Y for Yes or N for No.\n");
-            }
-
-            if (expand_choice == 'Y' || expand_choice == 'y') {
-                int valid_corners[2][4] = { 0 };
-                int corner_count = 0;
-
-                if (max_n - min_n == 1) {
-                    if (min_n > 3) {
-                        valid_corners[corner_count][0] = min_n - 3; valid_corners[corner_count][1] = max_n - 3;
-                        valid_corners[corner_count][2] = min_n;     valid_corners[corner_count][3] = max_n;
-                        corner_count++;
-                    }
-                    if (max_n <= 33) {
-                        valid_corners[corner_count][0] = min_n;     valid_corners[corner_count][1] = max_n;
-                        valid_corners[corner_count][2] = min_n + 3; valid_corners[corner_count][3] = max_n + 3;
-                        corner_count++;
-                    }
-                }
-                else if (max_n - min_n == 3) {
-                    if (min_n % 3 != 1) {
-                        valid_corners[corner_count][0] = min_n - 1; valid_corners[corner_count][1] = max_n - 1;
-                        valid_corners[corner_count][2] = min_n;     valid_corners[corner_count][3] = max_n;
-                        corner_count++;
-                    }
-                    if (max_n % 3 != 0) {
-                        valid_corners[corner_count][0] = min_n;     valid_corners[corner_count][1] = max_n;
-                        valid_corners[corner_count][2] = min_n + 1; valid_corners[corner_count][3] = max_n + 1;
-                        corner_count++;
-                    }
-                }
-
-                if (corner_count > 0) {
-                    printf("Available Corners based on your split:\n");
-                    for (int c = 0; c < corner_count; c++) {
-                        printf("[%d]: [%d, %d, %d, %d]\n", c + 1, valid_corners[c][0], valid_corners[c][1], valid_corners[c][2], valid_corners[c][3]);
-                    }
-
-                    while (1) {
-                        printf("Select corner option (1");
-                        if (corner_count == 2) printf(" or 2");
-                        printf(", or 0 to cancel expansion and keep original split): ");
-
-                        int corner_choice = get_safe_int();
-
-                        if (corner_choice == 0) {
-                            printf("Expansion cancelled. Keeping original Split bet.\n");
-                            break;
-                        }
-
-                        if (corner_choice > 0 && corner_choice <= corner_count) {
-                            int sel = corner_choice - 1;
-                            new_bet.numbers[0] = valid_corners[sel][0];
-                            new_bet.numbers[1] = valid_corners[sel][1];
-                            new_bet.numbers[2] = valid_corners[sel][2];
-                            new_bet.numbers[3] = valid_corners[sel][3];
-                            new_bet.num_count = 4;
-                            new_bet.bet_type = 7;
-                            printf(C_GREEN "Upgraded to Corner Bet!" C_RESET "\n");
-                            break;
-                        }
-
-                        printf(C_RED "Invalid option!" C_RESET " Please try again.\n");
-                    }
-                }
-            }
-            else {
-                printf("Keeping original Split bet.\n");
-            }
-        }
+        new_bet = handle_split_corner_bet();
         break;
-    }
-
     case 3:
-    {
-        printf("Choose Dozen (" C_WHITE "A" C_RESET " = 1-12, " C_WHITE "B" C_RESET " = 13-24, " C_WHITE "C" C_RESET " = 25-36): ");
-        char dozen_choice;
-        if (scanf(" %c", &dozen_choice) != 1) {
-            printf(C_RED "Invalid input format." C_RESET "\n");
-            while (getchar() != '\n'); return new_bet;
-        }
-        while (getchar() != '\n');
-        if (dozen_choice == 'A' || dozen_choice == 'a') new_bet.numbers[0] = 1;
-        else if (dozen_choice == 'B' || dozen_choice == 'b') new_bet.numbers[0] = 2;
-        else if (dozen_choice == 'C' || dozen_choice == 'c') new_bet.numbers[0] = 3;
-        else { printf(C_RED "Error: Invalid choice!" C_RESET "\n"); return new_bet; }
-        new_bet.num_count = 1; new_bet.bet_type = 3; break;
-    }
-
+        new_bet = handle_dozen_bet();
+        break;
     case 4:
-    {
-        printf("Choose color (" C_RED "R" C_RESET " for Red, " C_WHITE "B" C_RESET " for Black): ");
-        char color_choice;
-        if (scanf(" %c", &color_choice) != 1) {
-            printf(C_RED "Invalid input format." C_RESET "\n");
-            while (getchar() != '\n'); return new_bet;
-        }
-        while (getchar() != '\n');
-        if (color_choice == 'R' || color_choice == 'r') new_bet.numbers[0] = 1;
-        else if (color_choice == 'B' || color_choice == 'b') new_bet.numbers[0] = 2;
-        else { printf(C_RED "Error: Invalid choice!" C_RESET "\n"); return new_bet; }
-        new_bet.num_count = 1; new_bet.bet_type = 4; break;
-    }
-
+        new_bet = handle_color_bet();
+        break;
     case 5:
-    {
-        printf("Choose (" C_WHITE "E" C_RESET " for Even, " C_WHITE "O" C_RESET " for Odd): ");
-        char parity_choice;
-        if (scanf(" %c", &parity_choice) != 1) {
-            printf(C_RED "Invalid input format." C_RESET "\n");
-            while (getchar() != '\n'); return new_bet;
-        }
-        while (getchar() != '\n');
-        if (parity_choice == 'E' || parity_choice == 'e') new_bet.numbers[0] = 1;
-        else if (parity_choice == 'O' || parity_choice == 'o') new_bet.numbers[0] = 2;
-        else { printf(C_RED "Error: Invalid choice!" C_RESET "\n"); return new_bet; }
-        new_bet.num_count = 1; new_bet.bet_type = 5; break;
-    }
-
+        new_bet = handle_parity_bet();
+        break;
     case 6:
         printf("Choose Half (1 for 1-18, 2 for 19-36): ");
         new_bet.numbers[0] = get_safe_int();
         new_bet.num_count = 1;
         new_bet.bet_type = 6;
         break;
-
     default:
-        printf(C_RED "Invalid bet type!" C_RESET "\n");
+        printf("" C_RED "Invalid bet type!" C_RESET "\n");
+        return new_bet;
+    }
+
+    // אימות שהלוגיקה הפנימית לא נכשלה לפני בקשת סכום
+    if (new_bet.bet_type == 0) {
         return new_bet;
     }
 
@@ -446,6 +461,7 @@ void play_roulette(Player* player) {
     print_roulette_welcome();
 
     while (is_playing) {
+        system("cls");
         print_table_header("ROULETTE TABLE", C_CYAN, player->balance);
         print_spin_history(history); // קריאה להדפסת ההיסטוריה
         print_roulette_board();
@@ -483,11 +499,11 @@ void play_roulette(Player* player) {
                 continue;
             }
             if (current_bet.amount > player->balance || current_bet.amount <= 0) {
-                printf(C_RED "Invalid amount or insufficient funds!" C_RESET "\n");
+                display_error(1500, "Invalid amount or insufficient funds!");
                 continue;
             }
             if (current_bet.amount > MAX_BET) {
-                printf(C_RED "Table maximum bet is $%d!" C_RESET "\n", MAX_BET);
+                display_error(1500, "Table maximum bet is $%d!", MAX_BET);
                 continue;
             }
             player->balance -= current_bet.amount;
@@ -495,9 +511,11 @@ void play_roulette(Player* player) {
             active_bets[num_active_bets] = current_bet;
             num_active_bets++;
             printf(C_GREEN "Bet placed successfully!" C_RESET " New balance: $%d\n", player->balance);
+            delay_ms(1500);
         }
         else if (action == 2) {
             print_active_bets(active_bets, num_active_bets);
+            prompt_continue(NULL);
         }
         else if (action == 4 && num_active_bets > 0) {
             num_active_bets--;
@@ -516,13 +534,15 @@ void play_roulette(Player* player) {
 
             printf("\n");
             for (int spin_anim = 0; spin_anim < 25; spin_anim++) {
-                int temp_res = rand() % 38;
+                // שימוש במנוע הויזואלי בלבד להצגת הכדור המתגלגל
+                int temp_res = visual_rand() % 38;
                 printf("\r[ " C_CYAN "*" C_RESET " ] Ball rolling... %2d ", temp_res == 37 ? 00 : temp_res);
                 fflush(stdout);
                 delay_ms(50 + (spin_anim * 10));
             }
             printf("\r                                      \r");
 
+            // התוצאה האמיתית מוגרלת מהמחולל הראשי המאובטח
             int spin_result = rand() % 38;
             int spin_color = get_number_color(spin_result);
 
@@ -560,6 +580,8 @@ void play_roulette(Player* player) {
 
             save_player(player);
             num_active_bets = 0;
+
+            prompt_continue("Press ENTER to clear table for the next spin...");
 
             if (player->balance <= 0) {
                 printf("\n" C_RED "You are bankrupt! Security is escorting you out." C_RESET "\n");

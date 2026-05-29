@@ -9,7 +9,9 @@ typedef struct {
 } Card;
 
 // פונקציות מנוע הקלפים האוניברסלי
-Card* create_deck(int num_decks);
+void init_deck(Card* deck, int num_decks);
 void shuffle_deck(Card* deck, int total_cards);
+
+void print_cards_ascii(Card* hand, int count, const char* title, int hide_second);
 
 #endif

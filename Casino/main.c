@@ -21,25 +21,38 @@ void save_player(Player* p); // Prototype declaration
 static void update_leaderboard(Player* p) {
     Highscore scores[6] = { 0 };
     int count = 0;
-    FILE* file = fopen("highscores.txt", "r");
+
+    // ניתוב לתיקיית הנתונים החדשה
+    FILE* file = fopen("data/highscores.txt", "r");
     if (file != NULL) {
-        while (count < 5 && fscanf(file, "%s %d", scores[count].name, &scores[count].score) == 2) {
-            count++;
+        unsigned int file_hash;
+        // קריאה מאובטחת הדורשת 3 פרמטרים: שם, ניקוד, חתימה
+        while (count < 5 && fscanf(file, "%49s %d %u", scores[count].name, &scores[count].score, &file_hash) == 3) {
+            // Anti-Cheat: הוספת השורה למערך רק אם החתימה מאומתת
+            if (file_hash == (secure_hash(scores[count].name) ^ scores[count].score)) {
+                count++;
+            }
         }
         fclose(file);
     }
+
     int found = 0;
     for (int i = 0; i < count; i++) {
         if (strcmp(scores[i].name, p->name) == 0) {
-            if (p->balance > scores[i].score) scores[i].score = p->balance;
+            // הדירוג נקבע כעת אך ורק לפי סך הזכיות (Total Winnings)
+            if (p->total_winnings > scores[i].score) {
+                scores[i].score = p->total_winnings;
+            }
             found = 1; break;
         }
     }
     if (!found) {
         strcpy(scores[count].name, p->name);
-        scores[count].score = p->balance;
+        scores[count].score = p->total_winnings;
         count++;
     }
+
+    // מיון בסיסי
     for (int i = 0; i < count - 1; i++) {
         for (int j = 0; j < count - i - 1; j++) {
             if (scores[j].score < scores[j + 1].score) {
@@ -49,10 +62,15 @@ static void update_leaderboard(Player* p) {
             }
         }
     }
+
     int limit = (count > 5) ? 5 : count;
-    file = fopen("highscores.txt", "w");
+    file = fopen("data/highscores.txt", "w");
     if (file != NULL) {
-        for (int i = 0; i < limit; i++) fprintf(file, "%s %d\n", scores[i].name, scores[i].score);
+        for (int i = 0; i < limit; i++) {
+            // יצירת חתימה דינמית וכתיבתה לקובץ כדי למנוע עריכה חיצונית
+            unsigned int signature = secure_hash(scores[i].name) ^ scores[i].score;
+            fprintf(file, "%s %d %u\n", scores[i].name, scores[i].score, signature);
+        }
         fclose(file);
     }
 }
@@ -62,42 +80,77 @@ static void display_leaderboard() {
     printf("" C_YELLOW "==================================================\n");
     printf("           C A S I N O   H A L L   O F   F A M E  \n");
     printf("==================================================\n" C_RESET "");
-    FILE* file = fopen("highscores.txt", "r");
+
+    FILE* file = fopen("data/highscores.txt", "r");
     if (file != NULL) {
-        char name[MAX_NAME_LEN]; int score; int rank = 1;
-        printf("\n  RANK  |  PLAYER NAME          |  BALANCE \n--------------------------------------------------\n");
-        while (fscanf(file, "%s %d", name, &score) == 2 && rank <= 5) {
-            printf("  #%d    |  %-20s |  $%d\n", rank, name, score);
-            rank++;
+        char name[MAX_NAME_LEN];
+        int score;
+        unsigned int file_hash;
+        int rank = 1;
+
+        printf("\n  RANK  |  PLAYER NAME          |  TOTAL WINNINGS \n--------------------------------------------------\n");
+        while (fscanf(file, "%49s %d %u", name, &score, &file_hash) == 3 && rank <= 5) {
+            // מציג רק שורות שלא עברו השחתה
+            if (file_hash == (secure_hash(name) ^ score)) {
+                printf("  #%d    |  %-20s |  $%d\n", rank, name, score);
+                rank++;
+            }
         }
         fclose(file);
-        if (rank == 1) printf("\n  No records yet. Play a game and be the first!\n");
+        if (rank == 1) printf("\n  No records found or file tampered. Play to be the first!\n");
     }
     else {
         printf("\n  No records yet. Play a game and be the first!\n");
     }
-    printf("\n" C_GREEN "Press ENTER to return to the main menu..." C_RESET "");
-    wait_for_enter();
+
+    prompt_continue("Press ENTER to return to the main menu...");
 }
 
 
 
 int main() {
-    // שילוב של זמן בשניות, מחזורי שעון מעבד, וכתובת משתנה מקומי בזיכרון ליצירת גרעין קריפטוגרפי עמיד
+
+    // ==========================================================
+    // SECURE PRNG INITIALIZATION (שלב 3)
+    // ==========================================================
     int entropy_variable = 0;
-    unsigned int secure_seed = (unsigned int)time(NULL) ^ (unsigned int)clock() ^ (unsigned int)&entropy_variable;
+    unsigned int secure_seed = (unsigned int)time(NULL) ^ (unsigned int)clock() ^ (unsigned int)(unsigned long long) & entropy_variable;
+
+    // 1. אתחול ליבת ההימורים של הכסף האמיתי (הקוד המעולה שלך)
     srand(secure_seed);
+
+    // 2. אתחול מנוע האנימציות עם גרעין שעבר מיסוך נוסף כדי לנתק אותו מהכסף
+    init_visual_rand(secure_seed ^ 0x55555555);
+    // ==========================================================
+
     Player current_player = { 0 };
     int session_start_balance = 0;
 
     print_animated_banner();
 
-    printf("\nEnter your player name (no spaces): ");
-    if (scanf("%49s", current_player.name) != 1) strcpy(current_player.name, "Guest");
-    while (getchar() != '\n');
+    // לולאת קלט מאובטחת - לא מאפשרת מעבר עד לקבלת שם תקין
+    while (1) {
+        printf("\nEnter your player name (A-Z, 0-9, and _ only): ");
+        if (scanf("%49s", current_player.name) == 1) {
+            while (getchar() != '\n'); // ניקוי חוצץ
+
+            if (is_valid_name(current_player.name)) {
+                break; // השם חוקי ואושר
+            }
+            else {
+                printf("" C_RED "SECURITY ERROR: Invalid characters detected. Do not use slashes or dots." C_RESET "\n");
+            }
+        }
+        else {
+            while (getchar() != '\n');
+            strcpy(current_player.name, "Guest");
+            break;
+        }
+    }
 
     load_player(&current_player);
     session_start_balance = current_player.balance;
+    update_leaderboard(&current_player);
     delay_ms(1500);
 
     // מערך הפונקציות העדכני כולל כל המשחקים שבנינו
@@ -172,8 +225,7 @@ int main() {
             admin_panel(&current_player);
         }
         else {
-            printf("\n" C_RED "Invalid choice. Please select a valid option." C_RESET "\n");
-            delay_ms(1500);
+            display_error(1500, "Invalid choice. Please select a valid option.");
         }
     }
     return 0;

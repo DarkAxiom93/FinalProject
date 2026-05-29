@@ -9,6 +9,15 @@
 #include "cards.h"
 #include "account.h"
 
+#define SCORE_STRAIGHT_FLUSH  800000
+#define SCORE_FOUR_OF_A_KIND  700000
+#define SCORE_FULL_HOUSE      600000
+#define SCORE_FLUSH           500000
+#define SCORE_STRAIGHT        400000
+#define SCORE_THREE_OF_A_KIND 300000
+#define SCORE_TWO_PAIR        200000
+#define SCORE_ONE_PAIR        100000
+
 static int evaluate_poker_hand(Card hand[], int count) {
     int ranks[15] = { 0 };
     int suits[4] = { 0 };
@@ -52,56 +61,32 @@ static int evaluate_poker_hand(Card hand[], int count) {
         if (ranks[i] == 4) { quads++; }
     }
 
-    if (is_flush && straight_high > 0) return 800000 + straight_high;
-    if (quads > 0) return 700000 + max_rank;
-    if (trips > 0 && pairs > 0) return 600000 + highest_trip;
-    if (trips > 1) return 600000 + highest_trip;
-    if (is_flush) return 500000 + max_rank;
-    if (straight_high > 0) return 400000 + straight_high;
-    if (trips > 0) return 300000 + highest_trip;
-    if (pairs >= 2) return 200000 + highest_pair;
-    if (pairs == 1) return 100000 + highest_pair;
+    if (is_flush && straight_high > 0) return SCORE_STRAIGHT_FLUSH + straight_high;
+    if (quads > 0) return SCORE_FOUR_OF_A_KIND + max_rank;
+    if (trips > 0 && pairs > 0) return SCORE_FULL_HOUSE + highest_trip;
+    if (trips > 1) return SCORE_FULL_HOUSE + highest_trip;
+    if (is_flush) return SCORE_FLUSH + max_rank;
+    if (straight_high > 0) return SCORE_STRAIGHT + straight_high;
+    if (trips > 0) return SCORE_THREE_OF_A_KIND + highest_trip;
+    if (pairs >= 2) return SCORE_TWO_PAIR + highest_pair;
+    if (pairs == 1) return SCORE_ONE_PAIR + highest_pair;
 
     return max_rank;
 }
 
 static const char* get_hand_name(int score) {
-    if (score >= 800000) return "Straight Flush";
-    if (score >= 700000) return "Four of a Kind";
-    if (score >= 600000) return "Full House";
-    if (score >= 500000) return "Flush";
-    if (score >= 400000) return "Straight";
-    if (score >= 300000) return "Three of a Kind";
-    if (score >= 200000) return "Two Pair";
-    if (score >= 100000) return "One Pair";
+    if (score >= SCORE_STRAIGHT_FLUSH) return "Straight Flush";
+    if (score >= SCORE_FOUR_OF_A_KIND) return "Four of a Kind";
+    if (score >= SCORE_FULL_HOUSE) return "Full House";
+    if (score >= SCORE_FLUSH) return "Flush";
+    if (score >= SCORE_STRAIGHT) return "Straight";
+    if (score >= SCORE_THREE_OF_A_KIND) return "Three of a Kind";
+    if (score >= SCORE_TWO_PAIR) return "Two Pair";
+    if (score >= SCORE_ONE_PAIR) return "One Pair";
     return "High Card";
 }
 
-static void print_poker_hand_ascii(Card* hand, int count, const char* title, int is_hidden) {
-    if (title != NULL) printf("\n--- %s ---\n", title);
-    for (int i = 0; i < count; i++) printf("+-------+ ");
-    printf("\n");
-    for (int i = 0; i < count; i++) {
-        if (is_hidden) printf("|#######| ");
-        else printf("| %-2s    | ", hand[i].str);
-    }
-    printf("\n");
-    for (int i = 0; i < count; i++) {
-        if (is_hidden) printf("|#######| ");
-        else {
-            if (hand[i].suit == 'H' || hand[i].suit == 'D') printf("|   " C_RED "%c" C_RESET "   | ", hand[i].suit);
-            else printf("|   \x1b[97m%c" C_RESET "   | ", hand[i].suit);
-        }
-    }
-    printf("\n");
-    for (int i = 0; i < count; i++) {
-        if (is_hidden) printf("|#######| ");
-        else printf("|    %2s | ", hand[i].str);
-    }
-    printf("\n");
-    for (int i = 0; i < count; i++) printf("+-------+ ");
-    printf("\n");
-}
+
 
 void play_poker(Player* player) {
     int is_playing = 1;
@@ -125,11 +110,11 @@ void play_poker(Player* player) {
         int total_initial_bet = ante + blind + trips;
 
         if (total_initial_bet <= 0 || total_initial_bet > player->balance) {
-            printf("" C_RED "Invalid amounts or insufficient funds!" C_RESET "\n");
+            display_error(1500, "Invalid amounts or insufficient funds!");
             continue;
         }
         if (total_initial_bet > MAX_BET) {
-            printf("" C_RED "Table maximum total initial bet is $%d!" C_RESET "\n", MAX_BET);
+            display_error(1500, "Table maximum total initial bet is $%d!", MAX_BET);
             continue;
         }
         player->balance -= total_initial_bet;
@@ -138,7 +123,8 @@ void play_poker(Player* player) {
         int has_folded = 0;
 
         // שימוש במנוע הקלפים הגנרי - יצירת חפיסה אחת וערבוב
-        Card* deck = create_deck(1);
+        Card deck[52];
+        init_deck(deck, 1);
         shuffle_deck(deck, 52);
 
         int d_idx = 0;
@@ -156,7 +142,7 @@ void play_poker(Player* player) {
 
         printf(" [ Legend: " C_RED "H" C_RESET "=Hearts | " C_RED "D" C_RESET "=Diamonds | \x1b[97mC" C_RESET "=Clubs | \x1b[97mS" C_RESET "=Spades ]\n");
 
-        print_poker_hand_ascii(player_cards, 2, "Your Hand", 0);
+        print_cards_ascii(player_cards, 2, "Your Hand", 0);
 
         printf("Current Bets -> Ante: $%d | Blind: $%d | Trips: $%d\n", ante, blind, trips);
         printf("\n" C_YELLOW "--- PRE-FLOP ACTION ---" C_RESET "\n");
@@ -166,7 +152,7 @@ void play_poker(Player* player) {
         if (pre_flop_action == 2 || pre_flop_action == 3) {
             int mult = (pre_flop_action == 2) ? 3 : 4;
             if (player->balance < ante * mult) {
-                printf("" C_RED "Insufficient funds for Play bet. Auto-checking..." C_RESET "\n");
+                display_error(1500, "Insufficient funds for Play bet. Auto-checking...");
             }
             else {
                 play_bet = ante * mult;
@@ -182,8 +168,8 @@ void play_poker(Player* player) {
         printf("\n" C_CYAN "Dealing the FLOP..." C_RESET "\n");
         delay_ms(1000);
 
-        print_poker_hand_ascii(player_cards, 2, "Your Hand", 0);
-        print_poker_hand_ascii(community, 3, "Community Cards (FLOP)", 0);
+        print_cards_ascii(player_cards, 2, "Your Hand", 0);
+        print_cards_ascii(community, 3, "Community Cards (FLOP)", 0);
 
         if (play_bet == 0) {
             printf("\n" C_YELLOW "--- FLOP ACTION ---" C_RESET "\n");
@@ -192,7 +178,7 @@ void play_poker(Player* player) {
 
             if (flop_action == 2) {
                 if (player->balance < ante * 2) {
-                    printf("" C_RED "Insufficient funds for Play bet. Auto-checking..." C_RESET "\n");
+                    display_error(1500, "Insufficient funds for Play bet. Auto-checking...");
                 }
                 else {
                     play_bet = ante * 2;
@@ -209,8 +195,8 @@ void play_poker(Player* player) {
         printf("\n" C_CYAN "Dealing Turn & River..." C_RESET "\n");
         delay_ms(1000);
 
-        print_poker_hand_ascii(player_cards, 2, "Your Hand", 0);
-        print_poker_hand_ascii(community, 5, "Final Community Cards", 0);
+        print_cards_ascii(player_cards, 2, "Your Hand", 0);
+        print_cards_ascii(community, 5, "Final Community Cards", 0);
 
         if (play_bet == 0) {
             printf("\n" C_YELLOW "--- FINAL ACTION ---" C_RESET "\n");
@@ -224,7 +210,7 @@ void play_poker(Player* player) {
             }
             else {
                 if (player->balance < ante) {
-                    printf("" C_RED "Insufficient funds to call! You are forced to fold." C_RESET "\n");
+                    display_error(2000, "Insufficient funds to call! You are forced to fold.");
                     player->total_losses += (ante + blind);
                     has_folded = 1;
                 }
@@ -240,7 +226,7 @@ void play_poker(Player* player) {
         // ==========================================
         // שלב 4: חשיפה והערכת ידיים (Showdown)
         // ==========================================
-        print_poker_hand_ascii(dealer_cards, 2, "Dealer Reveals Hand", 0);
+        print_cards_ascii(dealer_cards, 2, "Dealer Reveals Hand", 0);
 
         Card p_eval[7] = { 0 }, d_eval[7] = { 0 };
         for (int i = 0; i < 5; i++) { p_eval[i] = community[i]; d_eval[i] = community[i]; }
@@ -255,12 +241,12 @@ void play_poker(Player* player) {
 
         if (trips > 0) {
             int trips_win = 0;
-            if (p_score >= 800000) trips_win = trips * 50;      // Straight Flush
-            else if (p_score >= 700000) trips_win = trips * 30; // Four of a Kind
-            else if (p_score >= 600000) trips_win = trips * 8;  // Full House
-            else if (p_score >= 500000) trips_win = trips * 7;  // Flush
-            else if (p_score >= 400000) trips_win = trips * 4;  // Straight
-            else if (p_score >= 300000) trips_win = trips * 3;  // Three of a Kind
+            if (p_score >= SCORE_STRAIGHT_FLUSH) trips_win = trips * 50;
+            else if (p_score >= SCORE_FOUR_OF_A_KIND) trips_win = trips * 30;
+            else if (p_score >= SCORE_FULL_HOUSE) trips_win = trips * 8;
+            else if (p_score >= SCORE_FLUSH) trips_win = trips * 7;
+            else if (p_score >= SCORE_STRAIGHT) trips_win = trips * 4;
+            else if (p_score >= SCORE_THREE_OF_A_KIND) trips_win = trips * 3;
 
             if (trips_win > 0) {
                 printf("\n" C_GREEN "TRIPS BET WON! Payout: $%d" C_RESET "\n", trips_win);
@@ -303,10 +289,9 @@ void play_poker(Player* player) {
         }
         save_player(player);
         // חשוב! מניעת דליפת זיכרון בסוף הסיבוב
-        free(deck);
+        
 
-        printf("\n" C_GREEN "Press ENTER to continue..." C_RESET "");
-        wait_for_enter();
+        prompt_continue(NULL);
 
         if (player->balance <= 0) {
             printf("\n" C_RED "You are bankrupt! Security is escorting you out." C_RESET "\n");

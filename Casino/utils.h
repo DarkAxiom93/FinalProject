@@ -22,11 +22,27 @@
 #define RESET      "" C_RESET ""
 #define TEXT_WHITE "\x1b[97m"
 
+// ==========================================
+// VISUAL ENGINE (ISOLATED PRNG)
+// ==========================================
+void init_visual_rand(unsigned int seed);
+int visual_rand();
+
+// פונקציית גיבוב מאובטחת לאימות סיסמאות
+unsigned int secure_hash(const char* str);
+
+// בדיקת תקינות מחרוזות למניעת Path Traversal
+int is_valid_name(const char* name);
+
 // הצהרות על פונקציות עזר מערכתיות
 int get_safe_int();
 void delay_ms(int ms);
 void print_animated_banner();
 void wait_for_enter();
+// פונקציות מעטפת לשכבת התצוגה (UI Layer)
+void display_error(int delay_time_ms, const char* format, ...);
+void prompt_continue(const char* message);
+
 void print_table_header(const char* title, const char* color, int balance);
 void* safe_malloc(size_t size);
 
