@@ -20,9 +20,9 @@ typedef struct {
     char name[MAX_NAME_LEN];
     long long score;
 } Highscore;
-// מאקרו אחיד לחישוב חתימת אבטחה לטבלת המובילים (מונע הבדלי קריאה/כתיבה)
-#define HIGHSCORE_SIG(name, score) (secure_hash(name) ^ (unsigned int)(score))
-
+// מאקרו אחיד לחישוב חתימת אבטחה לטבלת המובילים (קיפול 64-ביט מלא מונע התנגשויות)
+#define HIGHSCORE_SIG(name, score) \
+    (secure_hash(name) ^ (unsigned int)((score) & 0xFFFFFFFF) ^ (unsigned int)((score) >> 32))
 typedef void (*GameFunction)(Player*);
 
 void save_player(Player* p); // Prototype declaration
@@ -85,7 +85,7 @@ static void update_leaderboard(Player* p) {
 }
 
 static void display_leaderboard() {
-    system("cls");
+    clear_screen();
     printf("" C_YELLOW "==================================================\n");
     printf("           C A S I N O   H A L L   O F   F A M E  \n");
     printf("==================================================\n" C_RESET "");
@@ -172,7 +172,7 @@ int main() {
     int total_games = 5;
 
     while (1) {
-        system("cls");
+        clear_screen();
 
         // מנגנון פשיטת הרגל החדש - שולח לקופאי במקום לזרוק החוצה
         if (current_player.balance <= 0) {
@@ -207,7 +207,7 @@ int main() {
         int choice = get_safe_int();
 
         if (choice >= 1 && choice <= total_games) {
-            system("cls");
+            clear_screen();
             casino_games[choice](&current_player);
         }
         else if (choice == 6) {
@@ -218,7 +218,7 @@ int main() {
         }
         else if (choice == 8) {
             int session_net = current_player.balance - session_start_balance;
-            system("cls");
+            clear_screen();
             printf("\n========================================\n          " C_CYAN "CASINO CHECKOUT RECEIPT" C_RESET "          \n========================================\n");
             printf(" Player Name      : %s\n Starting Balance : $%d\n Final Balance    : $%d\n----------------------------------------\n", current_player.name, session_start_balance, current_player.balance);
             if (session_net > 0) printf(" Session Profit   : " C_GREEN "+$%d" C_RESET "\n", session_net);
@@ -228,7 +228,7 @@ int main() {
 
             update_leaderboard(&current_player);
             save_player(&current_player);
-            delay_ms(4000);
+            delay_ms(3000);
             return 0;
         }
 #ifdef ENABLE_ADMIN_PANEL

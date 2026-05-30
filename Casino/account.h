@@ -7,5 +7,6 @@ void save_player(Player* p);
 void load_player(Player* p);
 void handle_withdrawal(Player* p);
 void handle_deposit(Player* p);
+void add_balance_safe(Player* p, int amount);
 
 #endif

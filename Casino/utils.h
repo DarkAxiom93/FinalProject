@@ -71,4 +71,6 @@ void play_win_sound();
 void play_jackpot_sound();
 void play_spin_sound(); 
 void stop_sound();
+
+void clear_screen();
 #endif

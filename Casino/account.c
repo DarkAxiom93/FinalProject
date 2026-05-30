@@ -25,6 +25,9 @@ void load_player(Player* p) {
     FILE* file = fopen(filename, "rb");
 
     if (file != NULL) {
+        // חישוב תפוסת זיכרון לשמירת עתיד (Future-Proofing):
+        // מקסימום תווים צפוי: VERSION(2) + NAME(49) + 5 נתונים של 64-ביט (עד 20 תווים כ"א) + ירידות שורה.
+        // סך הכל כ-160 תווים בלחץ. הקצאה של 1024 תווים מספקת מרווח ביטחון נדיב מאוד.
         char buffer[1024] = { 0 };
         int len = (int)fread(buffer, 1, sizeof(buffer) - 1, file);
         fclose(file);
@@ -50,7 +53,7 @@ void load_player(Player* p) {
                 }
                 long long expected_checksum = calculate_checksum(p);
                 if (loaded_checksum != expected_checksum) {
-                    system("cls");
+                    clear_screen();
                     printf("" C_RED "\n======================================================\n");
                     printf("  ! ! ! ANTI-CHEAT SYSTEM TRIGGERED ! ! !  \n");
                     printf("======================================================\n" C_RESET "");
@@ -92,8 +95,8 @@ void save_player(Player* p) {
         char buffer[1024] = { 0 };
 
         // כתיבת הטקסט הברור לתוך חוצץ (Buffer)
-        int len = snprintf(buffer, sizeof(buffer), "%d\n%s\n%lld\n%lld\n%lld\n%lld\n%lld\n",
-            SAVE_FILE_VERSION, p->name, (long long)p->balance, (long long)p->bank_balance,
+        int len = snprintf(buffer, sizeof(buffer), "%d\n%s\n%d\n%d\n%lld\n%lld\n%lld\n",
+            SAVE_FILE_VERSION, p->name, p->balance, p->bank_balance,
             p->total_winnings, p->total_losses, checksum);
         // הצפנת כל תוכן החוצץ
         crypt_buffer(buffer, len);
@@ -112,7 +115,7 @@ void save_player(Player* p) {
 
 // פונקציית עזר למשיכת כסף מהבנק לקופה של המשחק
 void handle_withdrawal(Player* p) {
-    system("cls");
+    clear_screen();
     print_table_header("CASHIER (WITHDRAW)", "" C_GREEN "", p->balance);
     printf("Current funds locked in Bank: $%d\n", p->bank_balance);
 
@@ -158,7 +161,7 @@ void handle_withdrawal(Player* p) {
 
 // פונקציית הקופאי המעודכנת - מנהלת גם הפקדות לקזינו וגם משיכות/הפקדות לבנק
 void handle_deposit(Player* p) {
-    system("cls");
+    clear_screen();
     print_table_header("CASINO CASHIER", "" C_GREEN "", p->balance);
     printf("Money in Wallet : $%d\n", p->balance);
     printf("Money in Bank   : $%d\n", p->bank_balance);
@@ -222,5 +225,36 @@ void handle_deposit(Player* p) {
         // פעולה 3: משיכה מהבנק לארנק
         handle_withdrawal(p);
     }
+}
+
+void add_balance_safe(Player* p, int amount) {
+    if (amount <= 0) return;
+
+    // שימוש ב-long long למניעת גלישה נומרית בזמן הבדיקה
+    long long potential_balance = (long long)p->balance + amount;
+
+    if (potential_balance > MAX_BALANCE) {
+        int overflow = (int)(potential_balance - MAX_BALANCE);
+        p->balance = MAX_BALANCE;
+
+        // בדיקה האם חשבון הבנק יכול לקלוט את העודף
+        if ((long long)p->bank_balance + overflow > MAX_BANK_BALANCE) {
+            int allowed_to_bank = MAX_BANK_BALANCE - p->bank_balance;
+            p->bank_balance = MAX_BANK_BALANCE;
+
+            printf("\n" C_RED "CRITICAL: Casino Vault limits exceeded!" C_RESET "\n");
+            printf("Wallet reached MAX ($%d). Bank reached MAX ($%d).\n", MAX_BALANCE, MAX_BANK_BALANCE);
+            printf("$%d evaporated due to banking regulations.\n", overflow - allowed_to_bank);
+        }
+        else {
+            p->bank_balance += overflow;
+            printf("\n" C_YELLOW "Wallet limit ($%d) reached!" C_RESET "\n", MAX_BALANCE);
+            printf("$%d automatically redirected to your SAFE BANK account.\n", overflow);
+        }
+    }
+    else {
+        p->balance += amount;
+    }
+    save_player(p); // שמירה מיידית ומאובטחת של ה-State החדש
 }
 

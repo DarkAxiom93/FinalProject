@@ -21,22 +21,54 @@
 static int evaluate_poker_hand(Card hand[], int count) {
     int ranks[15] = { 0 };
     int suits[4] = { 0 };
+    int suit_ranks[4][15] = { 0 }; // מעקב חדש: ערכים מחולקים לפי צורה
     int max_rank = 0;
 
     for (int i = 0; i < count; i++) {
         ranks[hand[i].rank_val]++;
-        if (hand[i].suit == 'H') suits[0]++;
-        else if (hand[i].suit == 'D') suits[1]++;
-        else if (hand[i].suit == 'C') suits[2]++;
-        else if (hand[i].suit == 'S') suits[3]++;
+        int s_idx = -1;
+        if (hand[i].suit == 'H') s_idx = 0;
+        else if (hand[i].suit == 'D') s_idx = 1;
+        else if (hand[i].suit == 'C') s_idx = 2;
+        else if (hand[i].suit == 'S') s_idx = 3;
+
+        if (s_idx != -1) {
+            suits[s_idx]++;
+            suit_ranks[s_idx][hand[i].rank_val]++; // תיעוד הערך בתוך הצורה הספציפית
+        }
+
         if (hand[i].rank_val > max_rank) max_rank = hand[i].rank_val;
     }
 
+    // שלב חדש: חיפוש Straight Flush חוקי (5 עוקבים מאותה צורה בדיוק)
+    int straight_flush_high = 0;
+    for (int s = 0; s < 4; s++) {
+        if (suits[s] >= 5) { // בודקים רצף רק אם יש פלאש בצורה הזו
+            int cons = 0;
+            for (int i = 14; i >= 2; i--) {
+                if (suit_ranks[s][i] > 0) {
+                    cons++;
+                    if (cons >= 5 && straight_flush_high == 0) straight_flush_high = i + 4;
+                }
+                else {
+                    cons = 0;
+                }
+            }
+            // סטרייט פלאש תחתון (A-2-3-4-5) באותה הצורה
+            if (suit_ranks[s][14] > 0 && suit_ranks[s][2] > 0 && suit_ranks[s][3] > 0 &&
+                suit_ranks[s][4] > 0 && suit_ranks[s][5] > 0) {
+                if (straight_flush_high == 0) straight_flush_high = 5;
+            }
+        }
+    }
+
+    // חישוב Flush רגיל
     int is_flush = 0;
     for (int i = 0; i < 4; i++) {
         if (suits[i] >= 5) is_flush = 1;
     }
 
+    // חישוב Straight רגיל
     int straight_high = 0;
     int cons = 0;
     for (int i = 14; i >= 2; i--) {
@@ -52,6 +84,7 @@ static int evaluate_poker_hand(Card hand[], int count) {
         if (straight_high == 0) straight_high = 5;
     }
 
+    // חישוב זוגות ושלשות
     int pairs = 0, trips = 0, quads = 0;
     int highest_pair = 0, highest_trip = 0;
 
@@ -61,7 +94,8 @@ static int evaluate_poker_hand(Card hand[], int count) {
         if (ranks[i] == 4) { quads++; }
     }
 
-    if (is_flush && straight_high > 0) return SCORE_STRAIGHT_FLUSH + straight_high;
+    // עץ הדירוג המעודכן - מונע את ה-False Positive
+    if (straight_flush_high > 0) return SCORE_STRAIGHT_FLUSH + straight_flush_high; // שימוש במשתנה החדש!
     if (quads > 0) return SCORE_FOUR_OF_A_KIND + max_rank;
     if (trips > 0 && pairs > 0) return SCORE_FULL_HOUSE + highest_trip;
     if (trips > 1) return SCORE_FULL_HOUSE + highest_trip;
@@ -293,6 +327,7 @@ void play_poker(Player* player) {
                 printf("\n" C_GREEN "TRIPS BET WON! Payout: $%d" C_RESET "\n", trips_win);
                 player->balance += (trips + trips_win);
                 player->total_winnings += trips_win;
+                add_balance_safe(player, trips + trips_win);
             }
             else {
                 printf("\n" C_RED "Trips bet lost." C_RESET "\n");
@@ -315,9 +350,8 @@ void play_poker(Player* player) {
 
                 int total_payout = total_win + blind_win;
                 printf("\n" C_GREEN "YOU WIN THE HAND! Collected: $%d" C_RESET "\n", total_payout);
-                player->balance += total_payout;
                 player->total_winnings += ((long long)total_payout - ((long long)ante + blind + play_bet));
-
+                add_balance_safe(player, total_payout);
             }
             else if (d_score > p_score) {
                 printf("\n" C_RED "DEALER WINS THE HAND!" C_RESET "\n");
@@ -325,7 +359,7 @@ void play_poker(Player* player) {
             }
             else {
                 printf("\n" C_YELLOW "PUSH (TIE)! Main bets returned." C_RESET "\n");
-                player->balance += (ante + blind + play_bet);
+                add_balance_safe(player, ante + blind + play_bet);
             }
         }
         save_player(player);

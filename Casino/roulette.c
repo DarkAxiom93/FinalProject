@@ -465,7 +465,7 @@ void play_roulette(Player* player) {
     print_roulette_welcome();
 
     while (is_playing) {
-        system("cls");
+        clear_screen();
         print_table_header("ROULETTE TABLE", C_CYAN, player->balance);
         print_spin_history(history); // קריאה להדפסת ההיסטוריה
         print_roulette_board();
@@ -568,17 +568,18 @@ void play_roulette(Player* player) {
                 int winnings = check_win(active_bets[i], spin_result);
                 if (winnings > 0) {
                     total_round_winnings += winnings;
-                    player->total_winnings += (winnings - active_bets[i].amount);
+                    player->total_winnings += ((long long)winnings - active_bets[i].amount);
                 }
                 else {
                     player->total_losses += active_bets[i].amount;
                 }
             }
 
+            // קוד חדש:
             if (total_round_winnings > 0) {
                 play_win_sound();
                 printf(C_GREEN "WINNER!" C_RESET " You won a total of $%d in this spin!\n", total_round_winnings);
-                player->balance += total_round_winnings;
+                add_balance_safe(player, total_round_winnings);
             }
             else {
                 printf(C_RED "All bets lost this round." C_RESET "\n");

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <conio.h>
 #include "casino.h"
 #include "utils.h"
 #include "account.h"
@@ -17,31 +18,48 @@ void admin_panel(Player* p) {
     printf("\x1b[41m\x1b[97m SYSTEM RESTRICTED AREA " C_RESET "\n");
     printf("Enter Admin Password: ");
 
-    char pass[50] = { 0 }; // תמיכה בסיסמה ארוכה באמת
-    if (scanf("%49s", pass) == 1) {
-        while (getchar() != '\n');
+    char pass[50] = { 0 };
+    int p_idx = 0;
+    char ch;
 
-        unsigned int pass_hash = hash_password(pass); // שימוש באלגוריתם המאובטח
+    // לולאת קליטת סיסמה מוסתרת עם תמיכה במחיקה (Backspace)
+    while (1) {
+        ch = (char)_getch(); // קליטת תו ללא הדפסה למסך
 
-        // כרגע מכוון ל-0 כדי לזרוק אותך החוצה ולהדפיס את ההאש החדש שלך!
-        unsigned int expected_hash = 4168410452U;
-
-        if (pass_hash != expected_hash) {
-            printf("" C_RED "ACCESS DENIED. INCORRECT PASSWORD." C_RESET "\n");
-
-         
-
-            delay_ms(5000);
-            return;
+        // אם המשתמש לחץ Enter (סיום הקלדה)
+        if (ch == '\r' || ch == '\n') {
+            pass[p_idx] = '\0'; // סגירת המחרוזת
+            printf("\n");
+            break;
+        }
+        // אם המשתמש לחץ Backspace (מחיקה)
+        else if (ch == '\b') {
+            if (p_idx > 0) {
+                p_idx--;
+                // מחיקת הכוכבית מהמסך: חזרה אחורה, דריסה עם רווח, וחזרה אחורה שוב
+                printf("\b \b");
+            }
+        }
+        // כל תו רגיל אחר (כל עוד לא חרגנו מגודל המערך)
+        else if (p_idx < 49) {
+            pass[p_idx++] = ch;
+            printf("*"); // הדפסת הכוכבית המזויפת
         }
     }
 
-    else {
-        while (getchar() != '\n'); return;
+    unsigned int pass_hash = hash_password(pass); // שימוש באלגוריתם המאובטח
+
+    // כרגע מכוון ל-0 כדי לזרוק אותך החוצה ולהדפיס את ההאש החדש שלך!
+    unsigned int expected_hash = 4168410452U;
+
+    if (pass_hash != expected_hash) {
+        printf("" C_RED "ACCESS DENIED. INCORRECT PASSWORD." C_RESET "\n");
+        delay_ms(5000);
+        return;
     }
 
     while (1) {
-        system("cls");
+        clear_screen();
         printf("" C_RED "========================================\n");
         printf("       CASINO ADMIN CONTROL PANEL       \n");
         printf("========================================" C_RESET "\n");
@@ -63,8 +81,8 @@ void admin_panel(Player* p) {
                 if (bonus > MAX_BALANCE) {
                     display_error(2000, "Error: Bonus amount cannot exceed MAX_BALANCE ($%d).", MAX_BALANCE);
                 }
-                // חסימה שנייה: קיטום (Capping) אם הבונוס יגרום לארנק לגלוש מעל המקסימום
-                else if (p->balance + bonus > MAX_BALANCE) {
+                // חסימה שנייה מאובטחת: Casting ל-long long למניעת Integer Overflow בעת החיבור
+                else if ((long long)p->balance + bonus > MAX_BALANCE) {
                     printf("\n" C_YELLOW "Notice: Bonus capped at wallet limit ($%d)." C_RESET "\n", MAX_BALANCE);
                     p->balance = MAX_BALANCE;
                     printf("" C_GREEN "Bonus granted to %s. New balance: $%d" C_RESET "\n", p->name, p->balance);

@@ -8,7 +8,7 @@
 // ==========================================
 // הדביקו כאן את פונקציית print_roulette_welcome במלואה
 void print_roulette_welcome() {
-    system("cls");
+    clear_screen();
     printf("%s\n", C_RED);
     printf("  _______  _______  __   __  ___      _______  _______  _______  _______ \n");
     printf(" |       ||       ||  | |  ||   |    |       ||       ||       ||       |\n");
@@ -31,7 +31,7 @@ void print_roulette_welcome() {
 
     printf(C_GREEN "Press ENTER to acknowledge rules and join the table..." C_RESET "");
     wait_for_enter();
-    system("cls");
+    clear_screen();
 }
 
 // ==========================================
@@ -39,7 +39,7 @@ void print_roulette_welcome() {
 // ==========================================
 // הדביקו כאן את פונקציית print_blackjack_welcome במלואה
  void print_blackjack_welcome() {
-    system("cls");
+    clear_screen();
     printf("\x1b[97m"); // צבע לבן
     printf("  ______  ___      _______  _______  ___   _    ____  _______  _______  ___   _ \n");
     printf(" |  __  \\|   |    |       ||       ||   | | |  |_   ||       ||       ||   | | |\n");
@@ -62,7 +62,7 @@ void print_roulette_welcome() {
 
     printf("" C_GREEN "Press ENTER to acknowledge rules and join the table..." C_RESET "");
     wait_for_enter();
-    system("cls");
+    clear_screen();
 }
 
 // ==========================================
@@ -70,7 +70,7 @@ void print_roulette_welcome() {
 // ==========================================
 // הדביקו כאן את פונקציית print_poker_welcome במלואה
  void print_poker_welcome() {
-     system("cls");
+     clear_screen();
      printf("" C_MAGENTA "");
      printf("  _    _ _   _   _                 _       \n");
      printf(" | |  | | | | | (_)               | |      \n");
@@ -92,7 +92,7 @@ void print_roulette_welcome() {
 
      printf("" C_GREEN "Press ENTER to sit at the table..." C_RESET "");
      wait_for_enter();
-     system("cls");
+     clear_screen();
  }
 
 // ==========================================
@@ -100,7 +100,7 @@ void print_roulette_welcome() {
 // ==========================================
 // הדביקו כאן את פונקציית print_slots_welcome במלואה
  void print_slots_welcome() {
-     system("cls");
+     clear_screen();
      printf("" C_YELLOW ""); // זהב
      printf("  ____  _      ___ _____  ____  \n");
      printf(" / ___|| |    / _ \\_   _|/ ___| \n");
@@ -120,7 +120,7 @@ void print_roulette_welcome() {
 
      printf("" C_GREEN "Press ENTER to pull the lever..." C_RESET "");
      wait_for_enter();
-     system("cls");
+     clear_screen();
  }
 
 // ==========================================
@@ -128,7 +128,7 @@ void print_roulette_welcome() {
 // ==========================================
 // הדביקו כאן את פונקציית print_football_welcome במלואה
  void print_football_welcome() {
-     system("cls");
+     clear_screen();
      printf("" C_GREEN ""); // ירוק דשא
      printf("  _    _    _ _____ _   _ _   _ ______ _____  \n");
      printf(" | |  | |  | |_   _| \\ | | \\ | |  ____|  __ \\ \n");
@@ -153,5 +153,5 @@ void print_roulette_welcome() {
 
      printf("" C_GREEN "Press ENTER to get your betting slip..." C_RESET "");
      wait_for_enter();
-     system("cls");
+     clear_screen();
  }

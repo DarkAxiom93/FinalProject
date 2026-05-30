@@ -38,8 +38,8 @@ int get_safe_int() {
 }
 
 void delay_ms(int ms) {
-    clock_t start_time = clock();
-    while (clock() < start_time + (ms * CLOCKS_PER_SEC / 1000));
+    // קריאת מערכת המרדימה את התהליך ומשחררת לחלוטין את משאבי ה-CPU
+    Sleep(ms);
 }
 
 // פונקציה חדשה לעצירת התוכנית והמתנה לאישור (פותר את הדילוג המהיר ואזהרת C6031)
@@ -55,7 +55,7 @@ void wait_for_enter() {
 
 void print_animated_banner() {
     const char* colors[] = { "" C_RED "", "" C_GREEN "", "" C_YELLOW "", "\x1b[34m", "" C_MAGENTA "", "" C_CYAN "" };
-    system("cls");
+    clear_screen();
 
     for (int i = 0; i < 6; i++) {
         printf("%s\n", colors[i]);
@@ -185,10 +185,14 @@ void init_security() {
 
         // 1. שדרוג אבטחה: Seed משולב מכמה מקורות ליצירת אנטרופיה גבוהה (Time + Clock + ASLR Address)
         unsigned int seed = (unsigned int)time(NULL) ^ (unsigned int)clock() ^ (unsigned int)(size_t)&seed;
-        srand(seed);
+        init_casino_rand(seed);
 
         casino_secret_key = rand(); // המנוע החדש ממלא את כל ה-32 ביטים בבת אחת!
 
+        // הערת תאוריה (Modulo Bias):
+        // פעולת המודולו (% 90000) על טווח ה-32-ביט (4.29 מיליארד) מייצרת הטיה
+        // מתמטית זניחה של כ-0.0018% לטובת הערכים הנמוכים. 
+        // עבור יצירת Salt למשחק, ההטיה הזו חסרת משמעות הנדסית ומתקבלת.
         casino_salt_1 = (rand() % 90000) + 10000;
         casino_salt_2 = (rand() % 90000) + 10000;
 
@@ -246,6 +250,7 @@ static inline unsigned long long rotl(const unsigned long long x, int k) {
 }
 
 // אתחול המנוע בעזרת אלגוריתם SplitMix64 לאנטרופיה ראשונית
+// אתחול המנוע בעזרת אלגוריתם SplitMix64 לאנטרופיה ראשונית
 void init_casino_rand(unsigned long long seed) {
     unsigned long long z = (seed += 0x9E3779B97F4A7C15ULL);
     z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
@@ -256,10 +261,20 @@ void init_casino_rand(unsigned long long seed) {
     z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
     z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
     prng_state[1] = z ^ (z >> 31);
+
+    // --- הגנת Sentinel ---
+    // אם, בסיכוי אפסי או בגלל פריצה, הזיכרון עומד על אפס מוחלט:
+    if (prng_state[0] == 0 && prng_state[1] == 0) {
+        prng_state[0] = 0x9E3779B97F4A7C15ULL; // ערך פיי שמונע תקיעה
+        prng_state[1] = seed | 1;             // מדליק בכוח את הביט הראשון
+    }
 }
 
 // יצירת המספר האקראי עצמו
 unsigned int casino_rand(void) {
+    if (prng_state[0] == 0 && prng_state[1] == 0) {
+        init_casino_rand((unsigned long long)time(NULL));
+    }
     const unsigned long long s0 = prng_state[0];
     unsigned long long s1 = prng_state[1];
     const unsigned long long result = s0 + s1;
@@ -299,4 +314,10 @@ void play_spin_sound() {
 // פונקציה לעצירת צליל מתגלגל (נשתמש בה ברולטה כשהיא עוצרת)
 void stop_sound() {
     PlaySound(NULL, 0, 0);
+}
+
+void clear_screen() {
+    // \x1b[H  -> מקפיץ את הסמן לפינה השמאלית העליונה
+    // \x1b[J  -> מנקה את המסך מנקודת הסמן ומטה
+    printf("\x1b[H\x1b[J");
 }

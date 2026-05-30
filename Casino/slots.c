@@ -121,9 +121,10 @@ void play_slots(Player* player) {
             player->total_losses += bet;
         }
 
+        // קוד חדש ומבוקר:
         if (payout > 0) {
-            player->balance += payout;
-            player->total_winnings += (payout - bet);
+            player->total_winnings += ((long long)payout - bet); // עדכון הסטטיסטיקה נשאר כרגיל
+            add_balance_safe(player, payout);         // הזרמה מבוקרת של הכסף
         }
 
         save_player(player);

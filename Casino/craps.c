@@ -10,7 +10,7 @@
  * תפקיד: מדפיסה באנר כניסה ברור למשחק הקוביות וממתינה לאישור המשתמש
  */
 void print_craps_welcome() {
-    system("cls");
+    clear_screen();
     printf("" C_MAGENTA ""); // צבע סגול/מג'נטה
     printf("   ____  ____      _    ____  ____  \n");
     printf("  / ___||  _ \\    / \\  |  _ \\/ ___| \n");
@@ -31,7 +31,7 @@ void print_craps_welcome() {
 
     printf("" C_GREEN "Press ENTER to acknowledge rules and join the table..." C_RESET "");
     wait_for_enter();
-    system("cls");
+    clear_screen();
 }
 
 /*

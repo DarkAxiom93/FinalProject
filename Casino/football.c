@@ -202,8 +202,8 @@ void play_football(Player* player) {
         int winnings = (int)(bet * total_slip_odds);
         printf("\n" C_GREEN "!!! WOW !!! YOU HIT THE WINNER SLIP !!!" C_RESET "\n");
         printf("You won a total of " C_GREEN "$%d" C_RESET " from odds of x%.2f!\n", winnings, total_slip_odds);
-        player->balance += winnings;
         player->total_winnings += ((long long)winnings - bet);
+        add_balance_safe(player, winnings);
     }
     else {
         printf("\n" C_RED "Slip busted! You missed one or more games. Better luck next week!" C_RESET "\n");

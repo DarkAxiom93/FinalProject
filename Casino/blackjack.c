@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <conio.h>
 #include "casino.h"
 #include "utils.h"
 #include "graphics.h"
@@ -33,13 +34,46 @@ static int calculate_hand_value(Card* hand, int count) {
     }
     return total;
 }
+// פונקציית עזר לזיהוי יד של "17 רך" (אס וקלפים שסכומם 6)
+static int is_soft_17(Card* hand, int count) {
+    int total = 0, hard_total = 0;
+
+    for (int i = 0; i < count; i++) {
+        // חישוב מקסימלי (אס נחשב כ-11, פנים נחשבים כ-10)
+        int v = (hand[i].rank_val == 14) ? 11 :
+            (hand[i].rank_val >= 11) ? 10 : hand[i].rank_val;
+        total += v;
+
+        // חישוב קשיח (אס נחשב כ-1 תמיד)
+        int hard_v = (hand[i].rank_val == 14) ? 1 :
+            (hand[i].rank_val >= 11) ? 10 : hand[i].rank_val;
+        hard_total += hard_v;
+    }
+
+    // אם היד סוכמת ל-17, אבל הסכום הקשיח שונה - זהו 17 רך!
+    return (total == 17 && total != hard_total);
+}
+
 
 static void play_hand(Card* hand, int* count, Card* deck, int* deck_idx, int* bet, Player* player, const char* hand_name, int* busted) {
     int val = calculate_hand_value(hand, *count);
 
     while (val < 21) {
         printf("\n[%s] Options: [1] Hit  [2] Stand  [3] Double Down: ", hand_name);
-        int move = get_safe_int();
+
+        clear_input_buffer(); // מוודאים שאין זבל בחוצץ
+        int move = 0;
+        char key;
+
+        // לולאת קליטה מיידית של מקש
+        while (1) {
+            key = (char)_getch();
+            if (key == '1') { move = 1; break; }
+            else if (key == '2') { move = 2; break; }
+            else if (key == '3') { move = 3; break; }
+        }
+
+        printf("%c\n", key); // מדפיסים את מה שהמשתמש לחץ כדי לתת פידבק ויזואלי
 
         if (move == 1) {
             hand[(*count)++] = deck[(*deck_idx)++];
@@ -57,15 +91,38 @@ static void play_hand(Card* hand, int* count, Card* deck, int* deck_idx, int* be
             break;
         }
         else if (move == 3) {
-            if (player->balance < *bet) {
+            // 1. חישוב סכום ההוספה המקסימלי המותר ללא גלישה מתקרת השולחן
+            int allowed_addition = *bet;
+            int was_capped = 0;
+
+            if (*bet + allowed_addition > MAX_BET) {
+                allowed_addition = MAX_BET - *bet;
+                was_capped = 1;
+            }
+
+            // 2. חסימה אם ההימור ההתחלתי כבר היה במקסימום המותר
+            if (allowed_addition <= 0) {
+                display_error(1500, "Bet is already at table maximum ($%d). Cannot double down!", MAX_BET);
+                continue;
+            }
+
+            // 3. בדיקת יתרה עבור סכום ההוספה בלבד (החלקי או המלא)
+            if (player->balance < allowed_addition) {
                 display_error(1500, "Insufficient funds to double down!");
                 continue;
             }
-            player->balance -= *bet;
-            save_player(player);
-            *bet *= 2;
-            printf("[%s] Bet doubled to $%d.\n", hand_name, *bet);
 
+            // 4. עריכת הפוינטר והיתרה באופן מסונכרן ובטוח
+            player->balance -= allowed_addition;
+            *bet += allowed_addition;
+            save_player(player);
+
+            if (was_capped) {
+                printf("\n" C_YELLOW "Notice: Double Down capped at table maximum ($%d)!" C_RESET "\n", MAX_BET);
+            }
+            printf("[%s] Bet increased to $%d.\n", hand_name, *bet);
+
+            // המשך משיכת קלף בודד כנדרש בחוקי Double Down
             hand[(*count)++] = deck[(*deck_idx)++];
             val = calculate_hand_value(hand, *count);
             print_cards_ascii(hand, *count, hand_name, 0);
@@ -90,8 +147,8 @@ static void resolve_bets(int p_val, int p_busted, int d_val, int bet, Player* pl
     printf("\n--- Result for %s ---\n", hand_name);
     if (d_val > 21) {
         printf("" C_GREEN "Dealer Busts! YOU WIN $%d!" C_RESET "\n", bet * 2);
-        player->balance += (bet * 2);
         player->total_winnings += bet;
+        add_balance_safe(player, bet * 2); // החלפה מאובטחת
     }
     else if (d_val > p_val) {
         printf("" C_RED "Dealer Wins %d to %d." C_RESET "\n", d_val, p_val);
@@ -99,19 +156,19 @@ static void resolve_bets(int p_val, int p_busted, int d_val, int bet, Player* pl
     }
     else if (d_val < p_val) {
         printf("" C_GREEN "YOU WIN $%d! %d to %d." C_RESET "\n", bet * 2, p_val, d_val);
-        player->balance += (bet * 2);
         player->total_winnings += bet;
+        add_balance_safe(player, bet * 2); // החלפה מאובטחת
     }
     else {
         printf("" C_YELLOW "PUSH! It's a tie." C_RESET "\n");
-        player->balance += bet;
+        add_balance_safe(player, bet); // החזרת ההימור באופו מאובטח
     }
 }
 
 void play_blackjack(Player* player) {
     int is_playing = 1;
     print_blackjack_welcome();
-    system("cls");
+    clear_screen();
     printf("\n" C_YELLOW "==================================================" C_RESET "\n");
     printf("  " C_CYAN "[Dealer]" C_RESET " Welcome to the VIP Blackjack Table, %s!\n", player->name);
     printf("  " C_CYAN "[Dealer]" C_RESET " Shuffling the 6-deck shoe...\n");
@@ -174,13 +231,13 @@ void play_blackjack(Player* player) {
 
             if (d_val == 21) {
                 printf("" C_YELLOW "Push (Tie)." C_RESET " Dealer also has Blackjack.\n");
-                player->balance += bet1;
+                add_balance_safe(player, bet1);
             }
             else {
                 int win_amount = bet1 + (int)(bet1 * 1.5);
                 printf("" C_GREEN "You won $%d!" C_RESET "\n", (int)(bet1 * 1.5));
-                player->balance += win_amount;
                 player->total_winnings += ((long long)win_amount - bet1);
+                add_balance_safe(player, win_amount);
             }
         }
         else {
@@ -222,7 +279,13 @@ void play_blackjack(Player* player) {
                 print_cards_ascii(d_hand, d_count, "Dealer", 0);
                 printf("Total Value: %d\n", calculate_hand_value(d_hand, d_count));
 
-                while (calculate_hand_value(d_hand, d_count) < 17) {
+                // הדילר מושך קלף אם יש לו פחות מ-17, או אם יש לו בדיוק 17 רך (אס ו-6)
+                while (calculate_hand_value(d_hand, d_count) < 17 || is_soft_17(d_hand, d_count)) {
+                    if (is_soft_17(d_hand, d_count)) {
+                        printf("\n" C_YELLOW "Dealer has a Soft 17. Dealer must hit!" C_RESET "\n");
+                    }
+
+                    delay_ms(1500);
                     printf("Dealer hits...\n");
                     d_hand[d_count++] = deck[deck_idx++];
                     print_cards_ascii(d_hand, d_count, "Dealer", 0);
