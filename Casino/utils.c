@@ -4,9 +4,19 @@
 #include <stdarg.h>
 #include <time.h>
 #include <ctype.h>
+#include <conio.h>
 #include "utils.h"
 
+// פונקציה אגרסיבית לניקוי חוצץ המקלדת 
+void clear_input_buffer() {
+    // 1. מרוקן את חוצץ המערכת (Console Buffer) מכל המקשים שנלחצו באקראי
+    while (_kbhit()) {
+        (void)_getch();
+    }
+}
+
 int get_safe_int() {
+    clear_input_buffer();
     int value;
     // הלולאה הזו רצה כל עוד המשתמש לא הכניס מספר חוקי בכלל (למשל, הקליד רק אותיות)
     while (scanf("%d", &value) != 1 || value < 0) {
@@ -29,8 +39,13 @@ void delay_ms(int ms) {
 
 // פונקציה חדשה לעצירת התוכנית והמתנה לאישור (פותר את הדילוג המהיר ואזהרת C6031)
 void wait_for_enter() {
-    int discard = getchar(); // קליטת התו למשתנה כדי להשתיק את האזהרה של ה-Compiler
-    (void)discard;           // ציון מפורש שאנחנו מתעלמים מהערך בכוונה
+    clear_input_buffer(); // ניקוי הקלדות אקראיות מזמן האנימציות
+
+    // המתנה ללחיצת אנטר אמיתית בלבד! עוקף לחלוטין את stdin
+    while (1) {
+        int ch = _getch();
+        if (ch == '\r' || ch == '\n') break;
+    }
 }
 
 void print_animated_banner() {
@@ -161,9 +176,14 @@ void init_security() {
     }
     else {
         // הרצה ראשונה (First Boot): ייצור מפתחות ייחודיים לשרת
-        srand((unsigned int)time(NULL));
 
-        casino_secret_key = ((unsigned int)rand() << 16) | rand();
+        // 1. שדרוג אבטחה: Seed משולב מכמה מקורות ליצירת אנטרופיה גבוהה (Time + Clock + ASLR Address)
+        unsigned int seed = (unsigned int)time(NULL) ^ (unsigned int)clock() ^ (unsigned int)(size_t)&seed;
+        srand(seed);
+
+        // 2. שדרוג ייצור המפתח: שילוב 3 קריאות כדי לכסות 32 ביט מלאים (עוקף את מגבלת 15-הביט של Windows)
+        casino_secret_key = ((unsigned int)rand() << 17) ^ ((unsigned int)rand() << 2) ^ rand();
+
         casino_salt_1 = (rand() % 90000) + 10000;
         casino_salt_2 = (rand() % 90000) + 10000;
 

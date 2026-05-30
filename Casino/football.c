@@ -14,9 +14,9 @@
 typedef struct {
     char home_team[30];
     char away_team[30];
-    float odds_1;
-    float odds_X;
-    float odds_2;
+    double odds_1;
+    double odds_X;
+    double odds_2;
     int user_prediction;  // 1 = בית, 2 = תיקו, 3 = חוץ, 0 = דילוג (Skipped)
     int actual_outcome;
 } Match;
@@ -32,6 +32,7 @@ const char* team_pool[] = {
 static int get_match_prediction(int match_num) {
     char choice;
     while (1) {
+        clear_input_buffer();
         printf("Enter prediction for Match %d (1, X, 2, or S to skip): ", match_num);
         if (scanf(" %c", &choice) == 1) {
             while (getchar() != '\n');
@@ -81,9 +82,9 @@ void play_football(Player* player) {
         strcpy(slip[i].away_team, team_pool[away_idx]);
 
         // הגרלת יחסי זכייה אקראיים והגיוניים
-        slip[i].odds_1 = 1.6f + ((float)rand() / (float)RAND_MAX) * 1.2f;
-        slip[i].odds_X = 2.8f + ((float)rand() / (float)RAND_MAX) * 1.0f;
-        slip[i].odds_2 = 1.9f + ((float)rand() / (float)RAND_MAX) * 1.5f;
+        slip[i].odds_1 = 1.6f + ((double)rand() / RAND_MAX) * 1.2;
+        slip[i].odds_X = 2.8f + ((double)rand() / RAND_MAX) * 1.0;
+        slip[i].odds_2 = 1.9f + ((double)rand() / RAND_MAX) * 1.5;
     }
 
     print_table_header("WINNER SPORTSBOOK", "" C_GREEN "", player->balance);
@@ -100,7 +101,7 @@ void play_football(Player* player) {
     printf("=============================================================\n\n");
 
     // קליטת הניחושים של המשתמש לטופס
-    float total_slip_odds = 1.0f;
+    double total_slip_odds = 1.0;
     int active_bets_count = 0;
 
     for (int i = 0; i < NUM_MATCHES; i++) {
@@ -202,7 +203,7 @@ void play_football(Player* player) {
         printf("\n" C_GREEN "!!! WOW !!! YOU HIT THE WINNER SLIP !!!" C_RESET "\n");
         printf("You won a total of " C_GREEN "$%d" C_RESET " from odds of x%.2f!\n", winnings, total_slip_odds);
         player->balance += winnings;
-        player->total_winnings += (winnings - bet);
+        player->total_winnings += ((long long)winnings - bet);
     }
     else {
         printf("\n" C_RED "Slip busted! You missed one or more games. Better luck next week!" C_RESET "\n");

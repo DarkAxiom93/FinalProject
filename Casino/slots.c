@@ -139,9 +139,7 @@ void play_slots(Player* player) {
         printf(" -> Press [" C_RED "0" C_RESET "] to exit to main menu\n");
         printf("--------------------------------------------------\n");
 
-        while (_kbhit()) {
-            (void)_getch();
-        }
+        clear_input_buffer();
 
         char key = ' ';
         while (1) {

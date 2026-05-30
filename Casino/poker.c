@@ -86,8 +86,6 @@ static const char* get_hand_name(int score) {
     return "High Card";
 }
 
-
-
 void play_poker(Player* player) {
     int is_playing = 1;
     print_poker_welcome();
@@ -163,7 +161,11 @@ void play_poker(Player* player) {
         }
         if (pre_flop_action == 2 || pre_flop_action == 3) {
             int mult = (pre_flop_action == 2) ? 3 : 4;
-            if (player->balance < ante * mult) {
+
+            if (ante * mult > MAX_BET) {
+                display_error(2500, "Play bet of $%d exceeds MAX_BET ($%d)! Auto-checking...", ante * mult, MAX_BET);
+            }
+            else if (player->balance < ante * mult) {
                 display_error(1500, "Insufficient funds for Play bet. Auto-checking...");
             }
             else {
@@ -201,7 +203,10 @@ void play_poker(Player* player) {
             }
 
             if (flop_action == 2) {
-                if (player->balance < ante * 2) {
+                if (ante * 2 > MAX_BET) {
+                    display_error(2500, "Play bet of $%d exceeds MAX_BET ($%d)! Auto-checking...", ante * 2, MAX_BET);
+                }
+                else if (player->balance < ante * 2) {
                     display_error(1500, "Insufficient funds for Play bet. Auto-checking...");
                 }
                 else {
@@ -241,13 +246,13 @@ void play_poker(Player* player) {
 
             if (river_action == 2) {
                 printf("" C_RED "You FOLDED. Ante ($%d) and Blind ($%d) are lost." C_RESET "\n", ante, blind);
-                player->total_losses += (ante + blind);
+                player->total_losses += ((long long)ante + blind);
                 has_folded = 1;
             }
             else {
                 if (player->balance < ante) {
                     display_error(2000, "Insufficient funds to call! You are forced to fold.");
-                    player->total_losses += (ante + blind);
+                    player->total_losses += ((long long)ante + blind);
                     has_folded = 1;
                 }
                 else {
@@ -311,12 +316,12 @@ void play_poker(Player* player) {
                 int total_payout = total_win + blind_win;
                 printf("\n" C_GREEN "YOU WIN THE HAND! Collected: $%d" C_RESET "\n", total_payout);
                 player->balance += total_payout;
-                player->total_winnings += (total_payout - (ante + blind + play_bet));
+                player->total_winnings += ((long long)total_payout - ((long long)ante + blind + play_bet));
 
             }
             else if (d_score > p_score) {
                 printf("\n" C_RED "DEALER WINS THE HAND!" C_RESET "\n");
-                player->total_losses += (ante + blind + play_bet);
+                player->total_losses += ((long long)ante + blind + play_bet);
             }
             else {
                 printf("\n" C_YELLOW "PUSH (TIE)! Main bets returned." C_RESET "\n");
@@ -325,8 +330,6 @@ void play_poker(Player* player) {
         }
         save_player(player);
         // חשוב! מניעת דליפת זיכרון בסוף הסיבוב
-        
-
         prompt_continue(NULL);
 
         if (player->balance <= 0) {

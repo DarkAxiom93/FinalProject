@@ -27,24 +27,20 @@
 // ==========================================
 void init_visual_rand(unsigned int seed);
 int visual_rand();
-
-// פונקציית גיבוב מאובטחת לאימות סיסמאות
-unsigned int secure_hash(const char* str);
-// פונקציית גיבוב מושהית (Key Stretching) נגד מתקפות כוח גס
-unsigned int hash_password(const char* password);
-
-// בדיקת תקינות מחרוזות למניעת Path Traversal
-int is_valid_name(const char* name);
+unsigned int secure_hash(const char* str);// פונקציית גיבוב מאובטחת לאימות סיסמאות
+unsigned int hash_password(const char* password);// פונקציית גיבוב מושהית (Key Stretching) נגד מתקפות כוח גס
+int is_valid_name(const char* name);// בדיקת תקינות מחרוזות למניעת Path Traversal
+void clear_input_buffer();// פונקציה לניקוי אגרסיבי של אגירת קלט (מונעת באגים בזמן אנימציות)
 
 // הצהרות על פונקציות עזר מערכתיות
 int get_safe_int();
 void delay_ms(int ms);
 void print_animated_banner();
 void wait_for_enter();
+
 // פונקציות מעטפת לשכבת התצוגה (UI Layer)
 void display_error(int delay_time_ms, const char* format, ...);
 void prompt_continue(const char* message);
-
 void print_table_header(const char* title, const char* color, int balance);
 void* safe_malloc(size_t size);
 
@@ -57,4 +53,5 @@ extern unsigned int casino_salt_2;
 
 void init_security();
 void crypt_buffer(char* data, int length);
+
 #endif

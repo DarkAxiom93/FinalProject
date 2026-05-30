@@ -57,11 +57,27 @@ void admin_panel(Player* p) {
         else if (cmd == 1) {
             printf("Enter bonus amount: $");
             int bonus = get_safe_int();
+
             if (bonus > 0) {
-                p->balance += bonus;
-                printf("" C_GREEN "Bonus of $%d granted to %s." C_RESET "\n", bonus, p->name);
-                save_player(p);
-                delay_ms(1500);
+                // חסימה ראשונה: האדמין לא יכול לתת במכה אחת בונוס שגדול מנפח הארנק
+                if (bonus > MAX_BALANCE) {
+                    display_error(2000, "Error: Bonus amount cannot exceed MAX_BALANCE ($%d).", MAX_BALANCE);
+                }
+                // חסימה שנייה: קיטום (Capping) אם הבונוס יגרום לארנק לגלוש מעל המקסימום
+                else if (p->balance + bonus > MAX_BALANCE) {
+                    printf("\n" C_YELLOW "Notice: Bonus capped at wallet limit ($%d)." C_RESET "\n", MAX_BALANCE);
+                    p->balance = MAX_BALANCE;
+                    printf("" C_GREEN "Bonus granted to %s. New balance: $%d" C_RESET "\n", p->name, p->balance);
+                    save_player(p);
+                    delay_ms(2000);
+                }
+                // מצב תקין: הבונוס נכנס בשלמותו
+                else {
+                    p->balance += bonus;
+                    printf("" C_GREEN "Bonus of $%d granted to %s. New balance: $%d" C_RESET "\n", bonus, p->name, p->balance);
+                    save_player(p);
+                    delay_ms(1500);
+                }
             }
         }
         else if (cmd == 2) {
@@ -100,9 +116,9 @@ void admin_panel(Player* p) {
                         buffer[len] = '\0';
 
                         Player audited_player = { 0 };
-                        long audited_checksum = 0;
+                        long long audited_checksum = 0;
 
-                        int read_count = sscanf(buffer, "%49s\n%d\n%d\n%d\n%d\n%ld",
+                        int read_count = sscanf(buffer, "%49s\n%d\n%d\n%lld\n%lld\n%lld",
                             audited_player.name, &audited_player.balance, &audited_player.bank_balance,
                             &audited_player.total_winnings, &audited_player.total_losses, &audited_checksum);
 
@@ -112,10 +128,10 @@ void admin_panel(Player* p) {
                             printf("  Current_Balance: $%d\n", audited_player.balance);
                             printf("  Bank_Balance:    $%d\n", audited_player.bank_balance);
                             printf("  -----------------------------\n");
-                            printf("  Total_Winnings:  $%d\n", audited_player.total_winnings);
-                            printf("  Total_Losses:    $%d\n", audited_player.total_losses);
+                            printf("  Total_Winnings:  $%lld\n", audited_player.total_winnings);
+                            printf("  Total_Losses:    $%lld\n", audited_player.total_losses);
                             printf("  =============================\n");
-                            printf("  Checksum:        %ld\n", audited_checksum);
+                            printf("  Checksum:        %lld\n", audited_checksum);
                             printf(C_CYAN "---------------------------------------" C_RESET "\n");
                         }
                         else {

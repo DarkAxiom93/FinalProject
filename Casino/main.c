@@ -8,10 +8,20 @@
 #include "account.h"
 #include "admin.h"
 
+// ההגנה האולטימטיבית: המספר לא קיים כאן! 
+// אם מישהו מפעיל את הפאנל אבל שכח להזריק את הקוד דרך הקומפיילר - הקומפילציה תעצור עם שגיאה.
+#ifdef ENABLE_ADMIN_PANEL
+#ifndef ADMIN_ENTRY_CODE
+#error "CRITICAL: ADMIN_ENTRY_CODE is missing! You must inject it via Visual Studio Preprocessor."
+#endif
+#endif
+
 typedef struct {
     char name[MAX_NAME_LEN];
-    int score;
+    long long score;
 } Highscore;
+// מאקרו אחיד לחישוב חתימת אבטחה לטבלת המובילים (מונע הבדלי קריאה/כתיבה)
+#define HIGHSCORE_SIG(name, score) (secure_hash(name) ^ (unsigned int)(score))
 
 typedef void (*GameFunction)(Player*);
 
@@ -26,9 +36,9 @@ static void update_leaderboard(Player* p) {
     if (file != NULL) {
         unsigned int file_hash;
         // קריאה מאובטחת הדורשת 3 פרמטרים: שם, ניקוד, חתימה
-        while (count < 5 && fscanf(file, "%49s %d %u", scores[count].name, &scores[count].score, &file_hash) == 3) {
+        while (count < 5 && fscanf(file, "%49s %lld %u", scores[count].name, &scores[count].score, &file_hash) == 3) {
             // Anti-Cheat: הוספת השורה למערך רק אם החתימה מאומתת
-            if (file_hash == (secure_hash(scores[count].name) ^ scores[count].score)) {
+            if (file_hash == HIGHSCORE_SIG(scores[count].name, scores[count].score)) {
                 count++;
             }
         }
@@ -67,8 +77,8 @@ static void update_leaderboard(Player* p) {
     if (file != NULL) {
         for (int i = 0; i < limit; i++) {
             // יצירת חתימה דינמית וכתיבתה לקובץ כדי למנוע עריכה חיצונית
-            unsigned int signature = secure_hash(scores[i].name) ^ scores[i].score;
-            fprintf(file, "%s %d %u\n", scores[i].name, scores[i].score, signature);
+            unsigned int signature = HIGHSCORE_SIG(scores[i].name, scores[i].score);
+            fprintf(file, "%s %lld %u\n", scores[i].name, scores[i].score, signature);
         }
         fclose(file);
     }
@@ -83,15 +93,15 @@ static void display_leaderboard() {
     FILE* file = fopen("data/highscores.txt", "r");
     if (file != NULL) {
         char name[MAX_NAME_LEN];
-        int score;
+        long long score;
         unsigned int file_hash;
         int rank = 1;
 
         printf("\n  RANK  |  PLAYER NAME          |  TOTAL WINNINGS \n--------------------------------------------------\n");
-        while (fscanf(file, "%49s %d %u", name, &score, &file_hash) == 3 && rank <= 5) {
+        while (fscanf(file, "%49s %lld %u", name, &score, &file_hash) == 3 && rank <= 5) {
             // מציג רק שורות שלא עברו השחתה
-            if (file_hash == (secure_hash(name) ^ score)) {
-                printf("  #%d    |  %-20s |  $%d\n", rank, name, score);
+            if (file_hash == HIGHSCORE_SIG(name, score)) {
+                printf("  #%d    |  %-20s |  $%lld\n", rank, name, score);
                 rank++;
             }
         }
@@ -104,8 +114,6 @@ static void display_leaderboard() {
 
     prompt_continue("Press ENTER to return to the main menu...");
 }
-
-
 
 int main() {
 
@@ -187,6 +195,9 @@ int main() {
         }
 
         print_table_header("CASINO - MAIN MENU", "" C_CYAN "", current_player.balance);
+        // הערת אבטחה: מודפס כ-%d משום ש-bank_balance הוא int.
+        // בטוח לחלוטין כרגע כי MAX_BANK_BALANCE קטן משמעותית מ-INT_MAX.
+        // לשנות ל-%lld אם הטיפוס ישודרג בעתיד.
         printf("" C_GREEN "  [ Safe Bank Balance: $%d ]" C_RESET "\n\n", current_player.bank_balance);
         printf("Select an option:\n");
         printf("1. Roulette\n2. Blackjack\n3. Ultimate Texas Hold'em\n4. Slot Machine\n5. Sports Betting (Winner)\n");
@@ -213,7 +224,7 @@ int main() {
             if (session_net > 0) printf(" Session Profit   : " C_GREEN "+$%d" C_RESET "\n", session_net);
             else if (session_net < 0) printf(" Session Loss     : " C_RED "-$%d" C_RESET "\n", -session_net);
             else printf(" Session Net      : $0 (Broke Even)\n");
-            printf(" Lifetime Wins    : $%d\n Lifetime Losses  : $%d\n========================================\n" C_YELLOW " Thank you for playing! See you next time." C_RESET "\n", current_player.total_winnings, current_player.total_losses);
+            printf(" Lifetime Wins    : $%lld\n Lifetime Losses  : $%lld\n========================================\n" C_YELLOW " Thank you for playing! See you next time." C_RESET "\n", current_player.total_winnings, current_player.total_losses);
 
             update_leaderboard(&current_player);
             save_player(&current_player);

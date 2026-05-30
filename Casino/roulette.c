@@ -134,6 +134,7 @@ static void print_active_bets(Bet active_bets[], int count) {
  * מפרידה בצורה מוחלטת בין "0" ל-"00" (שמיוצג במערכת כ-37)
  */
 static int get_roulette_number() {
+    clear_input_buffer();
     char input[50] = { 0 };
     if (scanf("%9s", input) == 1) {
         while (getchar() != '\n');
@@ -302,6 +303,7 @@ static Bet handle_split_corner_bet() {
 static Bet handle_dozen_bet() {
     Bet new_bet = { 0 };
     printf("Choose Dozen (" C_WHITE "A" C_RESET " = 1-12, " C_WHITE "B" C_RESET " = 13-24, " C_WHITE "C" C_RESET " = 25-36): ");
+    clear_input_buffer();
     char dozen_choice;
     if (scanf(" %c", &dozen_choice) != 1) {
         printf("" C_RED "Invalid input format." C_RESET "\n");
@@ -319,6 +321,7 @@ static Bet handle_dozen_bet() {
 static Bet handle_color_bet() {
     Bet new_bet = { 0 };
     printf("Choose color (" C_RED "R" C_RESET " for Red, " C_WHITE "B" C_RESET " for Black): ");
+    clear_input_buffer();
     char color_choice;
     if (scanf(" %c", &color_choice) != 1) {
         printf("" C_RED "Invalid input format." C_RESET "\n");
@@ -335,6 +338,7 @@ static Bet handle_color_bet() {
 static Bet handle_parity_bet() {
     Bet new_bet = { 0 };
     printf("Choose (" C_WHITE "E" C_RESET " for Even, " C_WHITE "O" C_RESET " for Odd): ");
+    clear_input_buffer();
     char parity_choice;
     if (scanf(" %c", &parity_choice) != 1) {
         printf("" C_RED "Invalid input format." C_RESET "\n");

@@ -34,7 +34,6 @@ static int calculate_hand_value(Card* hand, int count) {
     return total;
 }
 
-
 static void play_hand(Card* hand, int* count, Card* deck, int* deck_idx, int* bet, Player* player, const char* hand_name, int* busted) {
     int val = calculate_hand_value(hand, *count);
 
@@ -111,9 +110,7 @@ static void resolve_bets(int p_val, int p_busted, int d_val, int bet, Player* pl
 
 void play_blackjack(Player* player) {
     int is_playing = 1;
-
     print_blackjack_welcome();
-
     system("cls");
     printf("\n" C_YELLOW "==================================================" C_RESET "\n");
     printf("  " C_CYAN "[Dealer]" C_RESET " Welcome to the VIP Blackjack Table, %s!\n", player->name);
@@ -145,28 +142,14 @@ void play_blackjack(Player* player) {
         printf("Bet of $%d placed. Dealing cards...\n", bet1);
 
         // יצירת 6 חפיסות אמיתיות לבלאק ג'ק VIP מהמנוע הגנרי!
-
         Card deck[312] = { 0 };
         init_deck(deck, 6);
-        if (deck == NULL) {
-            printf("" C_RED "Game error: Could not load cards. Returning to menu." C_RESET "\n");
-            return; // יציאה מסודרת חזרה לתפריט הראשי
-        }
         shuffle_deck(deck, 312);
 
         // הקצאת הידיים מראש על ה-Stack ללא תלות במערכת ההפעלה
         Card p_hand1[12] = { 0 };
         Card p_hand2[12] = { 0 };
         Card d_hand[12] = { 0 };
-
-
-        if (p_hand1 == NULL || d_hand == NULL) {
-            printf("\n" C_RED "SYSTEM ERROR: Memory allocation failed for hands." C_RESET "\n");
-            free(deck); // מונע דליפת זיכרון של החפיסה שכבר הוקצתה
-            if (p_hand1) free(p_hand1);
-            if (d_hand) free(d_hand);
-            break;
-        }
 
         int p1_count = 0, p2_count = 0, d_count = 0, deck_idx = 0;
         int is_split = 0, bet2 = 0;
@@ -197,11 +180,11 @@ void play_blackjack(Player* player) {
                 int win_amount = bet1 + (int)(bet1 * 1.5);
                 printf("" C_GREEN "You won $%d!" C_RESET "\n", (int)(bet1 * 1.5));
                 player->balance += win_amount;
-                player->total_winnings += (win_amount - bet1);
+                player->total_winnings += ((long long)win_amount - bet1);
             }
         }
         else {
-            if (strcmp(p_hand1[0].str, p_hand1[1].str) == 0 && player->balance >= bet1) {
+            if (p_hand1[0].rank_val == p_hand1[1].rank_val && player->balance >= bet1) {
                 printf("\n" C_CYAN "You have a pair! Do you want to SPLIT? (Costs an additional $%d)" C_RESET "\n", bet1);
                 printf("[1] Yes, Split  [2] No, Play as one hand: ");
 
@@ -210,23 +193,13 @@ void play_blackjack(Player* player) {
                     bet2 = bet1;
                     player->balance -= bet2;
                     save_player(player);
-
+                    p_hand2[0] = p_hand1[1];
+                    p1_count = 1;
+                    p2_count = 1;
+                    p_hand1[p1_count++] = deck[deck_idx++];
+                    p_hand2[p2_count++] = deck[deck_idx++];
+                    printf("\n" C_CYAN "--- HANDS SPLIT ---" C_RESET "\n");
                     
-                    if (p_hand2 == NULL) {
-                        printf("\n" C_RED "SYSTEM ERROR: Memory allocation failed for split. Continuing with single hand." C_RESET "\n");
-                    }
-                    else {
-
-                        p_hand2[0] = p_hand1[1];
-                        p1_count = 1;
-                        p2_count = 1;
-
-
-                        p_hand1[p1_count++] = deck[deck_idx++];
-                        p_hand2[p2_count++] = deck[deck_idx++];
-
-                        printf("\n" C_CYAN "--- HANDS SPLIT ---" C_RESET "\n");
-                    }
                 }
             }
             
@@ -240,7 +213,7 @@ void play_blackjack(Player* player) {
             if (is_split) {
                 printf("\n--- PLAYING HAND 2 ---\n");
                 print_cards_ascii(p_hand2, p2_count, "Hand 2", 0);
-                printf("Total Value: %d\n", calculate_hand_value(p_hand1, p1_count));
+                printf("Total Value: %d\n", calculate_hand_value(p_hand2, p2_count));
                 play_hand(p_hand2, &p2_count, deck, &deck_idx, &bet2, player, "Hand 2", &p2_busted);
             }
 
@@ -264,8 +237,6 @@ void play_blackjack(Player* player) {
             }
         }
         save_player(player);
-
-        if (is_split) free(p_hand2);
 
         if (player->balance <= 0) {
             printf("\n" C_RED "You are bankrupt! Security is escorting you out." C_RESET "\n");
