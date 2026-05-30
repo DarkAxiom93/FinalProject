@@ -117,12 +117,21 @@ void admin_panel(Player* p) {
 
                         Player audited_player = { 0 };
                         long long audited_checksum = 0;
+                        int file_version = 0;
 
-                        int read_count = sscanf(buffer, "%49s\n%d\n%d\n%lld\n%lld\n%lld",
-                            audited_player.name, &audited_player.balance, &audited_player.bank_balance,
+                        // 1. מנסים קודם לקרוא בפורמט החדש (כולל מספר גרסה בהתחלה ותמיכה ב-64-ביט)
+                        int read_count = sscanf(buffer, "%d\n%49s\n%d\n%d\n%lld\n%lld\n%lld",
+                            &file_version, audited_player.name, &audited_player.balance, &audited_player.bank_balance,
                             &audited_player.total_winnings, &audited_player.total_losses, &audited_checksum);
 
-                        if (read_count == 6) {
+                        // 2. אם הקריאה נכשלה (קובץ ישן שלא מתחיל במספר גרסה), ננסה את הפורמט הישן
+                        if (read_count == 0) {
+                            read_count = sscanf(buffer, "%49s\n%d\n%d\n%lld\n%lld\n%lld",
+                                audited_player.name, &audited_player.balance, &audited_player.bank_balance,
+                                &audited_player.total_winnings, &audited_player.total_losses, &audited_checksum);
+                        }
+
+                        if (read_count >= 6) { // הצלחנו לחלץ את הנתונים בהצלחה
                             printf("\n" C_CYAN "--- SECURE DECRYPTED AUDIT REPORT: %s ---" C_RESET "\n", audited_player.name);
                             printf("  Player_Name:     %s\n", audited_player.name);
                             printf("  Current_Balance: $%d\n", audited_player.balance);

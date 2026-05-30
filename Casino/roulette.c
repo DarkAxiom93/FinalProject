@@ -537,6 +537,7 @@ void play_roulette(Player* player) {
             }
 
             printf("\n");
+            play_spin_sound(); // מתחיל לנגן את צליל הגלגול ברקע
             for (int spin_anim = 0; spin_anim < 25; spin_anim++) {
                 // שימוש במנוע הויזואלי בלבד להצגת הכדור המתגלגל
                 int temp_res = visual_rand() % 38;
@@ -545,7 +546,7 @@ void play_roulette(Player* player) {
                 delay_ms(50 + (spin_anim * 10));
             }
             printf("\r                                      \r");
-
+            stop_sound(); // עוצר את צליל הגלגול
             // התוצאה האמיתית מוגרלת מהמחולל הראשי המאובטח
             int spin_result = rand() % 38;
             int spin_color = get_number_color(spin_result);
@@ -575,6 +576,7 @@ void play_roulette(Player* player) {
             }
 
             if (total_round_winnings > 0) {
+                play_win_sound();
                 printf(C_GREEN "WINNER!" C_RESET " You won a total of $%d in this spin!\n", total_round_winnings);
                 player->balance += total_round_winnings;
             }

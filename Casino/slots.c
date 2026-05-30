@@ -100,10 +100,12 @@ void play_slots(Player* player) {
         if (r1 == 0 && r2 == 0 && r3 == 0) {
             payout = bet * 50;
             printf("\n" C_RED "*** J A C K P O T ***" C_RESET "\n");
+            play_jackpot_sound();
             printf("" C_GREEN "UNBELIEVABLE! You hit three 7s and won $%d!" C_RESET "\n", payout);
         }
         else if (r1 == r2 && r2 == r3) {
             payout = bet * 10;
+            play_win_sound();
             printf("\n" C_GREEN "BIG WIN! Three of a kind! You won $%d!" C_RESET "\n", payout);
         }
         else if ((r1 == 0 && r2 == 0) || (r1 == 0 && r3 == 0) || (r2 == 0 && r3 == 0)) {

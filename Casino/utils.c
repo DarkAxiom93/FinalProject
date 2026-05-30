@@ -6,6 +6,11 @@
 #include <ctype.h>
 #include <conio.h>
 #include "utils.h"
+#include <windows.h> // הכרחי עבור מנוע הסאונד Beep
+#include <mmsystem.h> // ספריית המולטימדיה של חלונות
+
+// פקודת קסם שמנחה את Visual Studio לקשר את ספריית האודיו אוטומטית:
+#pragma comment(lib, "winmm.lib")
 
 // פונקציה אגרסיבית לניקוי חוצץ המקלדת 
 void clear_input_buffer() {
@@ -133,6 +138,7 @@ int is_valid_name(const char* name) {
 }
 // מנוע חכם להצגת שגיאות באדום עם תמיכה במשתנים והשהיה אוטומטית
 void display_error(int delay_time_ms, const char* format, ...) {
+    play_error_sound();
     printf("" C_RED ""); // הפעלת צבע אדום
 
     va_list args;
@@ -181,8 +187,7 @@ void init_security() {
         unsigned int seed = (unsigned int)time(NULL) ^ (unsigned int)clock() ^ (unsigned int)(size_t)&seed;
         srand(seed);
 
-        // 2. שדרוג ייצור המפתח: שילוב 3 קריאות כדי לכסות 32 ביט מלאים (עוקף את מגבלת 15-הביט של Windows)
-        casino_secret_key = ((unsigned int)rand() << 17) ^ ((unsigned int)rand() << 2) ^ rand();
+        casino_secret_key = rand(); // המנוע החדש ממלא את כל ה-32 ביטים בבת אחת!
 
         casino_salt_1 = (rand() % 90000) + 10000;
         casino_salt_2 = (rand() % 90000) + 10000;
@@ -228,4 +233,70 @@ unsigned int hash_password(const char* password) {
     }
 
     return hash;
+}
+
+// ==========================================
+// ADVANCED CASINO PRNG ENGINE (Xoroshiro128+)
+// ==========================================
+static unsigned long long prng_state[2];
+
+// פונקציית עזר לסיבוב ביטים (Bit Rotation)
+static inline unsigned long long rotl(const unsigned long long x, int k) {
+    return (x << k) | (x >> (64 - k));
+}
+
+// אתחול המנוע בעזרת אלגוריתם SplitMix64 לאנטרופיה ראשונית
+void init_casino_rand(unsigned long long seed) {
+    unsigned long long z = (seed += 0x9E3779B97F4A7C15ULL);
+    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
+    z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
+    prng_state[0] = z ^ (z >> 31);
+
+    z = (seed += 0x9E3779B97F4A7C15ULL);
+    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
+    z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
+    prng_state[1] = z ^ (z >> 31);
+}
+
+// יצירת המספר האקראי עצמו
+unsigned int casino_rand(void) {
+    const unsigned long long s0 = prng_state[0];
+    unsigned long long s1 = prng_state[1];
+    const unsigned long long result = s0 + s1;
+
+    s1 ^= s0;
+    prng_state[0] = rotl(s0, 24) ^ s1 ^ (s1 << 16);
+    prng_state[1] = rotl(s1, 37);
+
+    // חיתוך ל-32 ביט כדי להתאים לשאר הקוד הקיים בקזינו
+    return (unsigned int)(result & 0xFFFFFFFF);
+}
+
+// ==========================================
+// AUDIO ENGINE IMPLEMENTATION (WAV FILES)
+// ==========================================
+
+// הערה: הדגל SND_ASYNC אומר למערכת "תנגן את הסאונד ברקע ואל תעצור את הקוד".
+// ככה הרולטה יכולה להסתובב *בזמן* שהסאונד מתנגן!
+
+void play_error_sound() {
+    PlaySound(TEXT("sounds\\error.wav"), NULL, SND_FILENAME | SND_ASYNC);
+}
+
+void play_win_sound() {
+    PlaySound(TEXT("sounds\\win.wav"), NULL, SND_FILENAME | SND_ASYNC);
+}
+
+void play_jackpot_sound() {
+    PlaySound(TEXT("sounds\\jackpot.wav"), NULL, SND_FILENAME | SND_ASYNC);
+}
+
+void play_spin_sound() {
+    // מנגן את סאונד הגלגול בלולאה (SND_LOOP) עד שנגיד לו לעצור
+    PlaySound(TEXT("sounds\\spin.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_LOOP);
+}
+
+// פונקציה לעצירת צליל מתגלגל (נשתמש בה ברולטה כשהיא עוצרת)
+void stop_sound() {
+    PlaySound(NULL, 0, 0);
 }

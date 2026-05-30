@@ -54,4 +54,21 @@ extern unsigned int casino_salt_2;
 void init_security();
 void crypt_buffer(char* data, int length);
 
+// ==========================================
+// ADVANCED CASINO PRNG (Xoroshiro128+)
+// ==========================================
+void init_casino_rand(unsigned long long seed);
+unsigned int casino_rand(void);
+
+// טריק אדריכלי: דורס את פונקציית rand הסטנדרטית בכל הפרויקט כדי שתשתמש במנוע שלנו!
+#define rand casino_rand
+
+// ==========================================
+// AUDIO ENGINE (WAV FILES)
+// ==========================================
+void play_error_sound();
+void play_win_sound();
+void play_jackpot_sound();
+void play_spin_sound(); 
+void stop_sound();
 #endif

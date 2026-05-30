@@ -82,9 +82,9 @@ void play_football(Player* player) {
         strcpy(slip[i].away_team, team_pool[away_idx]);
 
         // הגרלת יחסי זכייה אקראיים והגיוניים
-        slip[i].odds_1 = 1.6f + ((double)rand() / RAND_MAX) * 1.2;
-        slip[i].odds_X = 2.8f + ((double)rand() / RAND_MAX) * 1.0;
-        slip[i].odds_2 = 1.9f + ((double)rand() / RAND_MAX) * 1.5;
+        slip[i].odds_1 = 1.6f + ((double)rand() / 4294967295.0) * 1.2;
+        slip[i].odds_X = 2.8f + ((double)rand() / 4294967295.0) * 1.0;
+        slip[i].odds_2 = 1.9f + ((double)rand() / 4294967295.0) * 1.5;
     }
 
     print_table_header("WINNER SPORTSBOOK", "" C_GREEN "", player->balance);

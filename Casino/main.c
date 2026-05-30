@@ -123,8 +123,8 @@ int main() {
     int entropy_variable = 0;
     unsigned int secure_seed = (unsigned int)time(NULL) ^ (unsigned int)clock() ^ (unsigned int)(unsigned long long) & entropy_variable;
 
-    // 1. אתחול ליבת ההימורים של הכסף האמיתי (הקוד המעולה שלך)
-    srand(secure_seed);
+    // 1. אתחול ליבת ההימורים עם מנוע Xoroshiro128+ המאובטח שלנו
+    init_casino_rand(secure_seed);
 
     // 2. אתחול מנוע האנימציות עם גרעין שעבר מיסוך נוסף כדי לנתק אותו מהכסף
     init_visual_rand(secure_seed ^ 0x55555555);
