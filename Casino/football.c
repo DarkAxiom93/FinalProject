@@ -152,7 +152,7 @@ void play_football(Player* player) {
 
     // הגרלת תוצאות המשחקים ובדיקת הטופס
     int hit_all = 1;
-    printf("\n=================== SLIP RESULTS ===================\n");
+    printf("\n" C_YELLOW "=================== SLIP RESULTS ===================" C_RESET "\n");
     for (int i = 0; i < NUM_MATCHES; i++) {
         // הגרלת תוצאת אמת: 1=בית (45%), 2=תיקו (25%), 3=חוץ (30%)
         int r = rand() % 100;
@@ -160,24 +160,41 @@ void play_football(Player* player) {
         else if (r < 70) slip[i].actual_outcome = 2;
         else slip[i].actual_outcome = 3;
 
-        printf("Match %d: %s vs %s\n", i + 1, slip[i].home_team, slip[i].away_team);
+        // ייצור תוצאת סיום (שערים) ריאליסטית שתואמת להכרעה
+        int home_goals = 0, away_goals = 0;
+        if (slip[i].actual_outcome == 1) { // ניצחון בית
+            home_goals = (rand() % 4) + 1; // 1 עד 4 שערים
+            away_goals = rand() % home_goals; // תמיד פחות משערי הבית
+        }
+        else if (slip[i].actual_outcome == 2) { // תיקו
+            home_goals = rand() % 4; // 0 עד 3 שערים
+            away_goals = home_goals; // זהה
+        }
+        else { // ניצחון חוץ
+            away_goals = (rand() % 4) + 1; // 1 עד 4 שערים
+            home_goals = rand() % away_goals; // תמיד פחות משערי החוץ
+        }
+
+        // תצוגת UI משודרגת לכל משחק
+        printf("\n" C_CYAN "[ MATCH %d ]" C_RESET " %s vs %s\n", i + 1, slip[i].home_team, slip[i].away_team);
+        printf("FINAL SCORE: " C_WHITE "%d - %d" C_RESET " (%s)\n", home_goals, away_goals, outcome_to_str(slip[i].actual_outcome));
 
         if (slip[i].user_prediction == 0) {
-            // אם המשחק דולג, הוא מסומן בסימן ניטרלי ולא משפיע על מפולת ההפסד
-            printf(" -> Result: %s | Your Pick: SKIPPED [" C_CYAN "-" C_RESET "]\n", outcome_to_str(slip[i].actual_outcome));
+            printf("Your Pick  : SKIPPED\n");
+            printf("Status     : " C_CYAN "[ - ] NEUTRAL" C_RESET "\n");
         }
         else {
-            printf(" -> Result: %s | Your Pick: %s ", outcome_to_str(slip[i].actual_outcome), outcome_to_str(slip[i].user_prediction));
+            printf("Your Pick  : %s\n", outcome_to_str(slip[i].user_prediction));
             if (slip[i].user_prediction == slip[i].actual_outcome) {
-                printf("[" C_GREEN "V" C_RESET "]\n");
+                printf("Status     : " C_GREEN "[ V ] HIT!" C_RESET "\n");
             }
             else {
-                printf("[" C_RED "X" C_RESET "]\n");
-                hit_all = 0; // פגיעה שנכשלה פוסלת את כל הטופס
+                printf("Status     : " C_RED "[ X ] MISS" C_RESET "\n");
+                hit_all = 0; // פגיעה שנכשלה פוסלת את הטופס
             }
         }
+        printf("----------------------------------------------------\n");
     }
-    printf("====================================================\n");
 
     // חישוב זכיות/הפסדים
     if (hit_all) {

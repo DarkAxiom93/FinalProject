@@ -30,6 +30,8 @@ int visual_rand();
 
 // פונקציית גיבוב מאובטחת לאימות סיסמאות
 unsigned int secure_hash(const char* str);
+// פונקציית גיבוב מושהית (Key Stretching) נגד מתקפות כוח גס
+unsigned int hash_password(const char* password);
 
 // בדיקת תקינות מחרוזות למניעת Path Traversal
 int is_valid_name(const char* name);
@@ -46,4 +48,13 @@ void prompt_continue(const char* message);
 void print_table_header(const char* title, const char* color, int balance);
 void* safe_malloc(size_t size);
 
+// ==========================================
+// SYSTEM SECURITY & ENCRYPTION ENGINE
+// ==========================================
+extern unsigned int casino_secret_key;
+extern unsigned int casino_salt_1;
+extern unsigned int casino_salt_2;
+
+void init_security();
+void crypt_buffer(char* data, int length);
 #endif

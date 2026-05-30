@@ -10,18 +10,28 @@
 // ==========================================
 // פאנל ניהול סודי - גישת מפתחים בלבד
 // ==========================================
+#ifdef ENABLE_ADMIN_PANEL
+
 void admin_panel(Player* p) {
     system("cls");
     printf("\x1b[41m\x1b[97m SYSTEM RESTRICTED AREA " C_RESET "\n");
     printf("Enter Admin Password: ");
-    char pass[20] = { 0 };
-    if (scanf("%19s", pass) == 1) {
+
+    char pass[50] = { 0 }; // תמיכה בסיסמה ארוכה באמת
+    if (scanf("%49s", pass) == 1) {
         while (getchar() != '\n');
 
-        // החלף את הערך 1234567890U במספר שהודפס לך בשלב 3 (האות U מסמנת Unsigned)
-        if (secure_hash(pass) != 1517654452U) {
+        unsigned int pass_hash = hash_password(pass); // שימוש באלגוריתם המאובטח
+
+        // כרגע מכוון ל-0 כדי לזרוק אותך החוצה ולהדפיס את ההאש החדש שלך!
+        unsigned int expected_hash = 4168410452U;
+
+        if (pass_hash != expected_hash) {
             printf("" C_RED "ACCESS DENIED. INCORRECT PASSWORD." C_RESET "\n");
-            delay_ms(2000);
+
+         
+
+            delay_ms(5000);
             return;
         }
     }
@@ -72,44 +82,49 @@ void admin_panel(Player* p) {
             if (scanf("%49s", target) == 1) {
                 while (getchar() != '\n');
                 if (!is_valid_name(target)) {
-                    printf("" C_RED "Invalid player name format. Path traversal blocked." C_RESET "\n");
+                    printf("" C_RED "Invalid player name format." C_RESET "\n");
                     delay_ms(2000);
                     continue;
                 }
                 char fname[MAX_NAME_LEN + 15];
-
-                // פונה לקובץ ה-.bin החדש
                 snprintf(fname, sizeof(fname), "data/%s.bin", target);
 
-                // פותח לקריאת טקסט
-                FILE* f = fopen(fname, "r");
-
+                FILE* f = fopen(fname, "rb"); // קריאה בינארית מהקובץ המוצפן
                 if (f) {
-                    Player audited_player = { 0 };
-                    long audited_checksum = 0;
-
-                    // שואב את הנתונים מהטקסט בדיוק כמו ב-load_player
-                    int read_count = fscanf(f, "%49s\n%d\n%d\n%d\n%d\n%ld",
-                        audited_player.name, &audited_player.balance, &audited_player.bank_balance,
-                        &audited_player.total_winnings, &audited_player.total_losses, &audited_checksum);
+                    char buffer[1024] = { 0 };
+                    int len = (int)fread(buffer, 1, sizeof(buffer) - 1, f);
                     fclose(f);
 
-                    if (read_count == 6) {
-                        // מדפיס למסך
-                        printf("\n" C_CYAN "--- SECURE AUDIT REPORT: %s ---" C_RESET "\n", audited_player.name);
-                        printf("  Player_Name:     %s\n", audited_player.name);
-                        printf("  Current_Balance: $%d\n", audited_player.balance);
-                        printf("  Bank_Balance:    $%d\n", audited_player.bank_balance);
-                        printf("  -----------------------------\n");
-                        printf("  Total_Winnings:  $%d\n", audited_player.total_winnings);
-                        printf("  Total_Losses:    $%d\n", audited_player.total_losses);
-                        printf("  =============================\n");
-                        printf("  Checksum:        %ld\n", audited_checksum);
-                        printf(C_CYAN "---------------------------------------" C_RESET "\n");
+                    if (len > 0) {
+                        crypt_buffer(buffer, len); // פענוח סודי לטובת מנהל המערכת
+                        buffer[len] = '\0';
+
+                        Player audited_player = { 0 };
+                        long audited_checksum = 0;
+
+                        int read_count = sscanf(buffer, "%49s\n%d\n%d\n%d\n%d\n%ld",
+                            audited_player.name, &audited_player.balance, &audited_player.bank_balance,
+                            &audited_player.total_winnings, &audited_player.total_losses, &audited_checksum);
+
+                        if (read_count == 6) {
+                            printf("\n" C_CYAN "--- SECURE DECRYPTED AUDIT REPORT: %s ---" C_RESET "\n", audited_player.name);
+                            printf("  Player_Name:     %s\n", audited_player.name);
+                            printf("  Current_Balance: $%d\n", audited_player.balance);
+                            printf("  Bank_Balance:    $%d\n", audited_player.bank_balance);
+                            printf("  -----------------------------\n");
+                            printf("  Total_Winnings:  $%d\n", audited_player.total_winnings);
+                            printf("  Total_Losses:    $%d\n", audited_player.total_losses);
+                            printf("  =============================\n");
+                            printf("  Checksum:        %ld\n", audited_checksum);
+                            printf(C_CYAN "---------------------------------------" C_RESET "\n");
+                        }
+                        else {
+                            printf("" C_RED "Error: Player record is corrupted or unreadable." C_RESET "\n");
+                        }
                     }
-                    else {
-                        printf("" C_RED "Error: Player record is corrupted or unreadable." C_RESET "\n");
-                    }
+                }
+                else {
+                    printf("" C_RED "Record not found for player: %s" C_RESET "\n", target);
                 }
                 printf("\nPress ENTER to continue...");
                 wait_for_enter();
@@ -130,3 +145,4 @@ void admin_panel(Player* p) {
         }
     }
 }
+#endif // ENABLE_ADMIN_PANEL

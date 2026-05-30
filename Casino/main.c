@@ -6,8 +6,7 @@
 #include "casino.h"
 #include "utils.h" 
 #include "account.h"
-
-
+#include "admin.h"
 
 typedef struct {
     char name[MAX_NAME_LEN];
@@ -122,7 +121,7 @@ int main() {
     // 2. אתחול מנוע האנימציות עם גרעין שעבר מיסוך נוסף כדי לנתק אותו מהכסף
     init_visual_rand(secure_seed ^ 0x55555555);
     // ==========================================================
-
+    init_security();
     Player current_player = { 0 };
     int session_start_balance = 0;
 
@@ -221,9 +220,11 @@ int main() {
             delay_ms(4000);
             return 0;
         }
-        else if (choice == 777) {
+#ifdef ENABLE_ADMIN_PANEL
+        else if (choice == ADMIN_ENTRY_CODE) {
             admin_panel(&current_player);
         }
+#endif
         else {
             display_error(1500, "Invalid choice. Please select a valid option.");
         }

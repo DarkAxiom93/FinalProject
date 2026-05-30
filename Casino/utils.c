@@ -142,3 +142,70 @@ void prompt_continue(const char* message) {
     }
     wait_for_enter();
 }
+
+// משתני מפתח גלובליים (אך לא מקודדים קשיח - נטענים בזמן ריצה)
+unsigned int casino_secret_key = 0;
+unsigned int casino_salt_1 = 0;
+unsigned int casino_salt_2 = 0;
+
+void init_security() {
+    FILE* file = fopen("data/server.key", "r");
+
+    if (file != NULL) {
+        // טעינת מפתחות משרת קיים
+        if (fscanf(file, "%u\n%u\n%u", &casino_secret_key, &casino_salt_1, &casino_salt_2) != 3) {
+            printf("" C_RED "CRITICAL SYSTEM ERROR: Security key corrupted! System halt." C_RESET "\n");
+            exit(1);
+        }
+        fclose(file);
+    }
+    else {
+        // הרצה ראשונה (First Boot): ייצור מפתחות ייחודיים לשרת
+        srand((unsigned int)time(NULL));
+
+        casino_secret_key = ((unsigned int)rand() << 16) | rand();
+        casino_salt_1 = (rand() % 90000) + 10000;
+        casino_salt_2 = (rand() % 90000) + 10000;
+
+        file = fopen("data/server.key", "w");
+        if (file != NULL) {
+            fprintf(file, "%u\n%u\n%u\n", casino_secret_key, casino_salt_1, casino_salt_2);
+            fclose(file);
+            // הסתרת קובץ המפתחות במערכת Windows
+            system("attrib +h data\\server.key");
+        }
+        else {
+            printf("" C_RED "CRITICAL SYSTEM ERROR: Could not create server key file." C_RESET "\n");
+            exit(1);
+        }
+    }
+}
+
+// פונקציית צופן הזרם (עובדת גם כהצפנה וגם כפענוח בעזרת XOR)
+void crypt_buffer(char* data, int length) {
+    unsigned int current_key = casino_secret_key ^ casino_salt_1;
+    for (int i = 0; i < length; i++) {
+        data[i] ^= (char)(current_key & 0xFF);
+        // סיבוב המפתח והוספת מלח כדי למנוע דפוסים חוזרים
+        current_key = (current_key >> 1) | ((current_key & 1) << 31);
+        current_key ^= casino_salt_2;
+    }
+}
+
+// אלגוריתם מושהה נגד כוח גס (Key Stretching)
+unsigned int hash_password(const char* password) {
+    unsigned int hash = 5381;
+    int c;
+
+    // 1. גיבוב בסיסי
+    while ((c = *password++)) {
+        hash = ((hash << 5) + hash) + c;
+    }
+
+    // 2. מתיחת מפתח - 100,000 איטרציות
+    for (int i = 0; i < 100000; i++) {
+        hash = ((hash << 5) + hash) ^ i;
+    }
+
+    return hash;
+}

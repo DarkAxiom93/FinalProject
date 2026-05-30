@@ -6,18 +6,19 @@
 #include "utils.h"
 #include "account.h"
 
-// פונקציית עזר לחישוב חתימת אבטחה מנקודה אחת בלבד
-static long calculate_checksum(Player* p) {
-    return (((long)p->balance * 7919) ^ ((long)p->bank_balance * 6841)) +
-        (((long)p->total_winnings * 5039) ^ (long)p->total_losses) ^ 0xDEADBEEF;
-}
+
 
 #define MAX_BALANCE 50000 // הגדרת מגבלת ההפקדה בקזינו
+
+// חתימת אבטחה המחושבת באופן דינמי וייחודי לכל התקנה של הקזינו
+static long calculate_checksum(Player* p) {
+    return (((long)p->balance * casino_salt_1) ^ ((long)p->bank_balance * casino_salt_2)) +
+        (((long)p->total_winnings * 5039) ^ (long)p->total_losses) ^ casino_secret_key;
+}
 
 void load_player(Player* p) {
     char temp_name[MAX_NAME_LEN];
     strcpy(temp_name, p->name);
-
     memset(p, 0, sizeof(Player));
     strcpy(p->name, temp_name);
 
@@ -26,47 +27,51 @@ void load_player(Player* p) {
     char filename[MAX_NAME_LEN + 15];
     snprintf(filename, sizeof(filename), "data/%s.bin", p->name);
 
-    // פתיחה לקריאת טקסט (r)
-    FILE* file = fopen(filename, "r");
+    // קריאה בינארית לתוך חוצץ (Buffer) כי המידע מוצפן
+    FILE* file = fopen(filename, "rb");
 
     if (file != NULL) {
-        long loaded_checksum = 0;
-
-        // קריאה מפורשת של הנתונים שורות-שורות
-        int read_count = fscanf(file, "%49s\n%d\n%d\n%d\n%d\n%ld",
-            p->name, &p->balance, &p->bank_balance, &p->total_winnings, &p->total_losses, &loaded_checksum);
-
-        // סגירת משאב מיידית
+        char buffer[1024] = { 0 };
+        int len = (int)fread(buffer, 1, sizeof(buffer) - 1, file);
         fclose(file);
 
-        if (read_count == 6) {
-            long expected_checksum = calculate_checksum(p);
+        if (len > 0) {
+            // פענוח צופן הזרם
+            crypt_buffer(buffer, len);
+            buffer[len] = '\0'; // אבטחת סיום מחרוזת
 
-            if (loaded_checksum != expected_checksum) {
-                system("cls");
-                printf("" C_RED "\n======================================================\n");
-                printf("  ! ! ! ANTI-CHEAT SYSTEM TRIGGERED ! ! !  \n");
-                printf("======================================================\n" C_RESET "");
-                printf("Data tampering detected in your save file!\n");
-                printf("Your account has been reset as a penalty.\n");
+            long loaded_checksum = 0;
+            // שאיבת הנתונים מהטקסט המפוענח שבתוך החוצץ
+            int read_count = sscanf(buffer, "%49s\n%d\n%d\n%d\n%d\n%ld",
+                p->name, &p->balance, &p->bank_balance, &p->total_winnings, &p->total_losses, &loaded_checksum);
 
-                memset(p, 0, sizeof(Player));
-                strcpy(p->name, temp_name);
-                p->balance = 0; p->bank_balance = 0; p->total_winnings = 0; p->total_losses = 0;
+            if (read_count == 6) {
+                long expected_checksum = calculate_checksum(p);
 
-                save_player(p);
-                delay_ms(5000);
+                if (loaded_checksum != expected_checksum) {
+                    system("cls");
+                    printf("" C_RED "\n======================================================\n");
+                    printf("  ! ! ! ANTI-CHEAT SYSTEM TRIGGERED ! ! !  \n");
+                    printf("======================================================\n" C_RESET "");
+                    printf("Data tampering detected in your save file!\n");
+                    printf("Your account has been reset as a penalty.\n");
+
+                    memset(p, 0, sizeof(Player));
+                    strcpy(p->name, temp_name);
+                    save_player(p);
+                    delay_ms(5000);
+                }
+                else {
+                    printf("\n" C_GREEN "Welcome back, %s! Your profile was securely loaded and decrypted." C_RESET "\n", p->name);
+                }
             }
             else {
-                printf("\n" C_GREEN "Welcome back, %s! Your profile was securely loaded." C_RESET "\n", p->name);
+                printf("\n" C_RED "SYSTEM ERROR: Save file is corrupted! Resetting account." C_RESET "\n");
+                memset(p, 0, sizeof(Player));
+                strcpy(p->name, temp_name);
+                save_player(p);
+                delay_ms(3000);
             }
-        }
-        else {
-            printf("\n" C_RED "SYSTEM ERROR: Save file is corrupted! Resetting account." C_RESET "\n");
-            memset(p, 0, sizeof(Player));
-            strcpy(p->name, temp_name);
-            save_player(p);
-            delay_ms(3000);
         }
     }
     else {
@@ -81,22 +86,27 @@ void save_player(Player* p) {
     snprintf(filename, sizeof(filename), "data/%s.bin", p->name);
     snprintf(temp_filename, sizeof(temp_filename), "data/%s.tmp", p->name);
 
-    // פתיחה לכתיבת טקסט (w)
-    FILE* file = fopen(temp_filename, "w");
+    FILE* file = fopen(temp_filename, "wb");
     if (file != NULL) {
         long checksum = calculate_checksum(p);
+        char buffer[1024] = { 0 };
 
-        // כתיבת הנתונים בפורמט טקסטואלי ברור שורה אחר שורה
-        fprintf(file, "%s\n%d\n%d\n%d\n%d\n%ld\n",
+        // כתיבת הטקסט הברור לתוך חוצץ (Buffer)
+        int len = snprintf(buffer, sizeof(buffer), "%s\n%d\n%d\n%d\n%d\n%ld\n",
             p->name, p->balance, p->bank_balance, p->total_winnings, p->total_losses, checksum);
 
+        // הצפנת כל תוכן החוצץ
+        crypt_buffer(buffer, len);
+
+        // כתיבת הבינארי המוצפן לקובץ
+        fwrite(buffer, 1, len, file);
         fclose(file);
 
         (void)remove(filename);
         (void)rename(temp_filename, filename);
     }
     else {
-        printf("" C_RED "Error: Could not save player data!" C_RESET "\n");
+        printf("" C_RED "Error: Could not save encrypted player data!" C_RESET "\n");
     }
 }
 
