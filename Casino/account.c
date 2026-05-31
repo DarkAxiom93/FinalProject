@@ -240,11 +240,22 @@ void add_balance_safe(Player* p, int amount) {
         // בדיקה האם חשבון הבנק יכול לקלוט את העודף
         if ((long long)p->bank_balance + overflow > MAX_BANK_BALANCE) {
             int allowed_to_bank = MAX_BANK_BALANCE - p->bank_balance;
+            int uncredited = overflow - allowed_to_bank; // הסכום שמעבר לתקרה
+
             p->bank_balance = MAX_BANK_BALANCE;
 
-            printf("\n" C_RED "CRITICAL: Casino Vault limits exceeded!" C_RESET "\n");
-            printf("Wallet reached MAX ($%d). Bank reached MAX ($%d).\n", MAX_BALANCE, MAX_BANK_BALANCE);
-            printf("$%d evaporated due to banking regulations.\n", overflow - allowed_to_bank);
+            // תיקון קריטי לסטטיסטיקה: החסרת הכסף שנחתם מתקרת הזכיות
+            // כדי שהסטטיסטיקה תציג אך ורק את הכסף שבאמת נכנס לשחקן
+            p->total_winnings -= uncredited;
+
+            // תצוגת UX חדשה ומקצועית - House Limit
+            printf("\n" C_YELLOW "==================================================" C_RESET "\n");
+            printf("" C_RED "   NOTICE: CASINO MAXIMUM PAYOUT CAP REACHED" C_RESET "\n");
+            printf("==================================================\n");
+            printf(" Wallet reached MAX limit ($%d).\n", MAX_BALANCE);
+            printf(" Safe Bank reached MAX limit ($%d).\n", MAX_BANK_BALANCE);
+            printf("\n" C_YELLOW " Excess winnings of $%d were capped due to house limits." C_RESET "\n", uncredited);
+            printf("==================================================\n");
         }
         else {
             p->bank_balance += overflow;
@@ -255,6 +266,5 @@ void add_balance_safe(Player* p, int amount) {
     else {
         p->balance += amount;
     }
-    save_player(p); // שמירה מיידית ומאובטחת של ה-State החדש
 }
 

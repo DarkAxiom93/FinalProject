@@ -325,7 +325,6 @@ void play_poker(Player* player) {
 
             if (trips_win > 0) {
                 printf("\n" C_GREEN "TRIPS BET WON! Payout: $%d" C_RESET "\n", trips_win);
-                player->balance += (trips + trips_win);
                 player->total_winnings += trips_win;
                 add_balance_safe(player, trips + trips_win);
             }

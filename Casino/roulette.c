@@ -523,7 +523,7 @@ void play_roulette(Player* player) {
         }
         else if (action == 4 && num_active_bets > 0) {
             num_active_bets--;
-            player->balance += active_bets[num_active_bets].amount;
+            add_balance_safe(player, active_bets[num_active_bets].amount);
             save_player(player);
             printf("\n" C_GREEN "Last bet cancelled successfully. $%d refunded." C_RESET "\n", active_bets[num_active_bets].amount);
             delay_ms(1500);
