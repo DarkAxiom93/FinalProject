@@ -168,7 +168,7 @@ static void run_dealer_turn(Card* d_hand, int* d_count, Card* deck, int* deck_id
     print_cards_ascii(d_hand, *d_count, "Dealer", 0);
     printf("Total Value: %d\n", calculate_hand_value(d_hand, *d_count));
 
-    while (calculate_hand_value(d_hand, *d_count) < 17 || is_soft_17(d_hand, *d_count) && *d_count < 11) {
+    while ((calculate_hand_value(d_hand, *d_count) < 17 || is_soft_17(d_hand, *d_count)) && *d_count < 11) {
         if (is_soft_17(d_hand, *d_count)) {
             printf("\n" C_CYAN "Dealer has a Soft 17. Dealer must hit!" C_RESET "\n");
         }

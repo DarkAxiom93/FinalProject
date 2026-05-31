@@ -89,12 +89,6 @@ void print_table_header(const char* title, const char* color, int balance) {
     printf("========================================\n");
 }
 
-/*
- * פונקציה: safe_malloc
- * תפקיד: עוטפת את הפונקציה malloc בבדיקת שגיאות קריטית.
- * מונעת קריסות פתאומיות ומנקה את הקוד במשחקים עצמם.
- */
-
 // משתנה סטטי השומר את המצב הפנימי של מנוע האנימציות בלבד
 static unsigned int visual_prng_state = 0;
 
