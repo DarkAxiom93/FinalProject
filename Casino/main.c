@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <Windows.h>
+#include <conio.h>
 #include "casino.h"
 #include "utils.h" 
 #include "account.h"
@@ -27,8 +29,13 @@ typedef void (*GameFunction)(Player*);
 
 void save_player(Player* p); // Prototype declaration
 
+#define MAX_SCORES 5 // גודל טבלת המובילים (Hall of Fame)
+
 static void update_leaderboard(Player* p) {
-    Highscore scores[6] = { 0 };
+    // אנו מקצים מקום ל-MAX_SCORES + 1
+    // המקום הנוסף משמש כ"חוצץ" לקליטת השחקן הנוכחי לפני המיון,
+    // במידה והטבלה כבר מלאה. לאחר המיון, השחקן החלש ביותר ייחתך.
+    Highscore scores[MAX_SCORES + 1] = { 0 };
     int count = 0;
 
     // ניתוב לתיקיית הנתונים החדשה
@@ -36,7 +43,7 @@ static void update_leaderboard(Player* p) {
     if (file != NULL) {
         unsigned int file_hash;
         // קריאה מאובטחת הדורשת 3 פרמטרים: שם, ניקוד, חתימה
-        while (count < 5 && fscanf(file, "%49s %lld %u", scores[count].name, &scores[count].score, &file_hash) == 3) {
+        while (count < MAX_SCORES && fscanf(file, "%49s %lld %u", scores[count].name, &scores[count].score, &file_hash) == 3) {
             // Anti-Cheat: הוספת השורה למערך רק אם החתימה מאומתת
             if (file_hash == HIGHSCORE_SIG(scores[count].name, scores[count].score)) {
                 count++;
@@ -72,7 +79,9 @@ static void update_leaderboard(Player* p) {
         }
     }
 
-    int limit = (count > 5) ? 5 : count;
+    // חיתוך למקסימום המותר באופן דינמי
+    int limit = (count > MAX_SCORES) ? MAX_SCORES : count;
+
     file = fopen("data/highscores.txt", "w");
     if (file != NULL) {
         for (int i = 0; i < limit; i++) {
@@ -98,7 +107,7 @@ static void display_leaderboard() {
         int rank = 1;
 
         printf("\n  RANK  |  PLAYER NAME          |  TOTAL WINNINGS \n--------------------------------------------------\n");
-        while (fscanf(file, "%49s %lld %u", name, &score, &file_hash) == 3 && rank <= 5) {
+        while (fscanf(file, "%49s %lld %u", name, &score, &file_hash) == 3 && rank <= MAX_SCORES) {
             // מציג רק שורות שלא עברו השחתה
             if (file_hash == HIGHSCORE_SIG(name, score)) {
                 printf("  #%d    |  %-20s |  $%lld\n", rank, name, score);
@@ -116,6 +125,8 @@ static void display_leaderboard() {
 }
 
 int main() {
+    hide_cursor();
+    CreateDirectory("data", NULL);
 
     // ==========================================================
     // SECURE PRNG INITIALIZATION (שלב 3)
@@ -175,23 +186,47 @@ int main() {
         clear_screen();
 
         // מנגנון פשיטת הרגל החדש - שולח לקופאי במקום לזרוק החוצה
+        // מנגנון פשיטת הרגל החדש - חכם ומותאם למצב הבנק
         if (current_player.balance <= 0) {
             printf("" C_RED "\n========================================\n");
             printf("          OUT OF FUNDS!          \n");
             printf("========================================" C_RESET "\n");
-            printf("You have lost all your money! Redirecting to the Cashier...\n");
-            delay_ms(2500);
 
-            handle_deposit(&current_player);
+            // בדיקה האם לשחקן יש "רשת ביטחון" בבנק
+            if (current_player.bank_balance > 0) {
+                printf("" C_YELLOW "Don't panic! You still have $%d safely locked in your Bank." C_RESET "\n", current_player.bank_balance);
+                printf("Options: [1] Withdraw from Bank  [2] Open Cashier (Deposit) \nAction: ");
 
-            // אם השחקן ביטל את ההפקדה או ניסה להפקיד 0
+                clear_input_buffer();
+                char key;
+                while (1) {
+                    key = (char)_getch();
+                    if (key == '1' || key == '2') break;
+                }
+                printf("%c\n", key);
+
+                if (key == '1') {
+                    handle_withdrawal(&current_player); // ניתוב ישיר למשיכה
+                }
+                else {
+                    handle_deposit(&current_player);    // תפריט קופאי רגיל
+                }
+            }
+            // אם באמת אין לו כלום בשום מקום
+            else {
+                printf("You have lost all your money! Redirecting to the Cashier...\n");
+                delay_ms(2500);
+                handle_deposit(&current_player);
+            }
+
+            // חסימה סופית - אם השחקן לא משך או הפקיד כסף, זורקים אותו מהקזינו
             if (current_player.balance <= 0) {
-                printf("\n" C_RED "GAME OVER: You are bankrupt and chose not to deposit!" C_RESET "\n");
+                printf("\n" C_RED "GAME OVER: You are bankrupt and chose not to fund your wallet!" C_RESET "\n");
                 update_leaderboard(&current_player);
                 save_player(&current_player);
                 break;
             }
-            continue; // אם הפקיד בהצלחה, הלולאה מתחילה מחדש עם התפריט
+            continue; // אם יש לו כסף עכשיו, הלולאה מתחילה מחדש עם תפריט המשחקים
         }
 
         print_table_header("CASINO - MAIN MENU", "" C_CYAN "", current_player.balance);

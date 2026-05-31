@@ -42,14 +42,16 @@ void wait_for_enter();
 void display_error(int delay_time_ms, const char* format, ...);
 void prompt_continue(const char* message);
 void print_table_header(const char* title, const char* color, int balance);
-void* safe_malloc(size_t size);
+
 
 // ==========================================
 // SYSTEM SECURITY & ENCRYPTION ENGINE
 // ==========================================
-extern unsigned int casino_secret_key;
-extern unsigned int casino_salt_1;
-extern unsigned int casino_salt_2;
+// אלו הן פונקציות הגישה המאובטחות (Read-Only)
+unsigned int get_secret_key();
+unsigned int get_salt_1();
+unsigned int get_salt_2();
+unsigned int get_admin_hash();
 
 void init_security();
 void crypt_buffer(char* data, int length);
@@ -73,4 +75,5 @@ void play_spin_sound();
 void stop_sound();
 
 void clear_screen();
+void hide_cursor();
 #endif

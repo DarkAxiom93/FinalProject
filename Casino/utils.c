@@ -94,15 +94,7 @@ void print_table_header(const char* title, const char* color, int balance) {
  * תפקיד: עוטפת את הפונקציה malloc בבדיקת שגיאות קריטית.
  * מונעת קריסות פתאומיות ומנקה את הקוד במשחקים עצמם.
  */
-void* safe_malloc(size_t size) {
-    void* ptr = malloc(size);
-    if (ptr == NULL) {
-        // המערכת רושמת שגיאה אבל לא קורסת. האחריות לטפל בזה עוברת לפונקציה הקוראת.
-        fprintf(stderr, "" C_RED "CRITICAL ERROR: Memory allocation failed!" C_RESET "\n");
-        return NULL;
-    }
-    return ptr;
-}
+
 // משתנה סטטי השומר את המצב הפנימי של מנוע האנימציות בלבד
 static unsigned int visual_prng_state = 0;
 
@@ -164,16 +156,22 @@ void prompt_continue(const char* message) {
     wait_for_enter();
 }
 
-// משתני מפתח גלובליים (אך לא מקודדים קשיח - נטענים בזמן ריצה)
-unsigned int casino_secret_key = 0;
-unsigned int casino_salt_1 = 0;
-unsigned int casino_salt_2 = 0;
+static unsigned int casino_secret_key = 0;
+static unsigned int casino_salt_1 = 0;
+static unsigned int casino_salt_2 = 0;
+static unsigned int admin_password_hash = 0; // השדרוג לאדמין
+
+// Getters למשיכת נתונים מבוקרת (Read-Only)
+unsigned int get_secret_key() { return casino_secret_key; }
+unsigned int get_salt_1() { return casino_salt_1; }
+unsigned int get_salt_2() { return casino_salt_2; }
+unsigned int get_admin_hash() { return admin_password_hash; }
 
 void init_security() {
     FILE* file = fopen("data/server.key", "r");
 
+    // חלק 1: טיפול במפתחות ההצפנה הכלליים של השרת
     if (file != NULL) {
-        // טעינת מפתחות משרת קיים
         if (fscanf(file, "%u\n%u\n%u", &casino_secret_key, &casino_salt_1, &casino_salt_2) != 3) {
             printf("" C_RED "CRITICAL SYSTEM ERROR: Security key corrupted! System halt." C_RESET "\n");
             exit(1);
@@ -181,18 +179,11 @@ void init_security() {
         fclose(file);
     }
     else {
-        // הרצה ראשונה (First Boot): ייצור מפתחות ייחודיים לשרת
-
-        // 1. שדרוג אבטחה: Seed משולב מכמה מקורות ליצירת אנטרופיה גבוהה (Time + Clock + ASLR Address)
+        // הרצה ראשונה: ייצור מפתחות ייחודיים לשרת (שומר על התיעוד והאקראיות מהגרסה הקודמת)
         unsigned int seed = (unsigned int)time(NULL) ^ (unsigned int)clock() ^ (unsigned int)(size_t)&seed;
         init_casino_rand(seed);
 
-        casino_secret_key = rand(); // המנוע החדש ממלא את כל ה-32 ביטים בבת אחת!
-
-        // הערת תאוריה (Modulo Bias):
-        // פעולת המודולו (% 90000) על טווח ה-32-ביט (4.29 מיליארד) מייצרת הטיה
-        // מתמטית זניחה של כ-0.0018% לטובת הערכים הנמוכים. 
-        // עבור יצירת Salt למשחק, ההטיה הזו חסרת משמעות הנדסית ומתקבלת.
+        casino_secret_key = rand();
         casino_salt_1 = (rand() % 90000) + 10000;
         casino_salt_2 = (rand() % 90000) + 10000;
 
@@ -200,12 +191,54 @@ void init_security() {
         if (file != NULL) {
             fprintf(file, "%u\n%u\n%u\n", casino_secret_key, casino_salt_1, casino_salt_2);
             fclose(file);
-            // הסתרת קובץ המפתחות במערכת Windows
             system("attrib +h data\\server.key");
         }
+    }
+
+    // חלק 2: טיפול ספציפי בסיסמת האדמין (לא פוגע ב-server.key הקיים)
+    FILE* admin_file = fopen("data/admin.key", "rb");
+
+    if (admin_file != NULL) {
+        unsigned int encrypted_hash = 0;
+        if (fread(&encrypted_hash, sizeof(unsigned int), 1, admin_file) == 1) {
+            // פענוח ההאש באמצעות המפתחות של השרת
+            admin_password_hash = encrypted_hash ^ casino_secret_key ^ casino_salt_1;
+        }
         else {
-            printf("" C_RED "CRITICAL SYSTEM ERROR: Could not create server key file." C_RESET "\n");
+            printf("" C_RED "CRITICAL SYSTEM ERROR: Admin key corrupted! System halt." C_RESET "\n");
             exit(1);
+        }
+        fclose(admin_file);
+    }
+    else {
+        // המערכת מזהה שאין סיסמת אדמין ודורשת מהמפעיל לקבוע אחת כעת
+        printf("\n" C_YELLOW "==================================================" C_RESET "\n");
+        printf("" C_CYAN "  SYSTEM UPDATE DETECTED: ADMIN PANEL SETUP" C_RESET "\n");
+        printf("" C_YELLOW "==================================================" C_RESET "\n");
+        printf("Please set a MASTER ADMIN PASSWORD for the control panel.\n");
+        printf("Password: ");
+
+        char pass[50] = { 0 };
+        int p_idx = 0;
+        char ch;
+        while (1) {
+            ch = (char)_getch();
+            if (ch == '\r' || ch == '\n') { pass[p_idx] = '\0'; printf("\n"); break; }
+            else if (ch == '\b') { if (p_idx > 0) { p_idx--; printf("\b \b"); } }
+            else if (p_idx < 49) { pass[p_idx++] = ch; printf("*"); }
+        }
+
+        admin_password_hash = hash_password(pass);
+        printf("" C_GREEN "Admin password securely configured!" C_RESET "\n");
+        delay_ms(1500);
+
+        // כתיבת ההאש בצורה מוצפנת קלות לקובץ
+        admin_file = fopen("data/admin.key", "wb");
+        if (admin_file != NULL) {
+            unsigned int encrypted_hash = admin_password_hash ^ casino_secret_key ^ casino_salt_1;
+            fwrite(&encrypted_hash, sizeof(unsigned int), 1, admin_file);
+            fclose(admin_file);
+            system("attrib +h data\\admin.key"); // הסתרת הקובץ
         }
     }
 }
@@ -320,4 +353,12 @@ void clear_screen() {
     // \x1b[H  -> מקפיץ את הסמן לפינה השמאלית העליונה
     // \x1b[J  -> מנקה את המסך מנקודת הסמן ומטה
     printf("\x1b[H\x1b[J");
+}
+
+void hide_cursor() {
+    HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO info;
+    info.dwSize = 100;
+    info.bVisible = FALSE;
+    SetConsoleCursorInfo(consoleHandle, &info);
 }

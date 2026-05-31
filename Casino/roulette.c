@@ -16,7 +16,7 @@
 #define BG_BLACK   "\x1b[40m"
 #define TEXT_WHITE "\x1b[97m"
 
-static int get_number_color(int number) {
+int get_number_color(int number) {
     if (number == 0 || number == 37) return 0;
     // תוקן המספר 19 במקום 28 לפי חוקי הקזינו המקוריים
     int red_numbers[] = { 1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36 };
@@ -44,44 +44,7 @@ static void print_spin_history(int history[]) {
     printf("]\n");
 }
 
-void print_roulette_board() {
-    printf("\n");
-    printf(BG_GREEN TEXT_WHITE "   00    " C_RESET);
-    for (int i = 3; i <= 36; i += 3) {
-        if (get_number_color(i) == 1) printf(BG_RED TEXT_WHITE "  %2d   " C_RESET, i);
-        else printf(BG_BLACK TEXT_WHITE "  %2d   " C_RESET, i);
-    }
-    printf("\n");
 
-    printf(BG_GREEN TEXT_WHITE "         " C_RESET);
-    for (int i = 2; i <= 35; i += 3) {
-        if (get_number_color(i) == 1) printf(BG_RED TEXT_WHITE "  %2d   " C_RESET, i);
-        else printf(BG_BLACK TEXT_WHITE "  %2d   " C_RESET, i);
-    }
-    printf("\n");
-
-    printf(BG_GREEN TEXT_WHITE "    0    " C_RESET);
-    for (int i = 1; i <= 34; i += 3) {
-        if (get_number_color(i) == 1) printf(BG_RED TEXT_WHITE "  %2d   " C_RESET, i);
-        else printf(BG_BLACK TEXT_WHITE "  %2d   " C_RESET, i);
-    }
-    printf("\n");
-
-    printf("         ");
-    printf(BG_GREEN TEXT_WHITE "           1st 12           " C_RESET);
-    printf(BG_GREEN TEXT_WHITE "           2nd 12           " C_RESET);
-    printf(BG_GREEN TEXT_WHITE "           3rd 12           " C_RESET);
-    printf("\n");
-
-    printf("         ");
-    printf(BG_GREEN TEXT_WHITE "     1-18     " C_RESET);
-    printf(BG_GREEN TEXT_WHITE "     Even     " C_RESET);
-    printf(BG_RED TEXT_WHITE   "     Red      " C_RESET);
-    printf(BG_BLACK TEXT_WHITE "    Black     " C_RESET);
-    printf(BG_GREEN TEXT_WHITE "     Odd      " C_RESET);
-    printf(BG_GREEN TEXT_WHITE "     19-36    " C_RESET);
-    printf("\n\n");
-}
 
 static void print_active_bets(Bet active_bets[], int count) {
     if (count == 0) {
@@ -458,6 +421,12 @@ void play_roulette(Player* player) {
     int is_playing = 1;
     Bet active_bets[MAX_BETS_PER_SPIN] = { 0 };
     int num_active_bets = 0;
+    
+    // --- משתני הזיכרון ל-Rebet ---
+    Bet previous_bets[MAX_BETS_PER_SPIN] = { 0 }; 
+    int num_previous_bets = 0;
+    
+   
 
     // מערך ההיסטוריה החדש (-1 מייצג שאין עדיין תוצאה)
     static int history[5] = { -1, -1, -1, -1, -1 };
@@ -469,7 +438,14 @@ void play_roulette(Player* player) {
         print_table_header("ROULETTE TABLE", C_CYAN, player->balance);
         print_spin_history(history); // קריאה להדפסת ההיסטוריה
         print_roulette_board();
-        printf("Active Bets on table: %d\n", num_active_bets);
+        int total_table_bet = 0;
+        for (int i = 0; i < num_active_bets; i++) {
+            total_table_bet += active_bets[i].amount;
+        }
+
+        // תצוגת UI משודרגת
+        printf("" C_YELLOW " [ Active Bets: %d/%d | Total on Table: $%d ]" C_RESET "\n",
+            num_active_bets, MAX_BETS_PER_SPIN, total_table_bet);
 
         printf("\nOptions:\n");
         printf("0. Leave Table\n");
@@ -478,6 +454,9 @@ void play_roulette(Player* player) {
         if (num_active_bets > 0) {
             printf("3. " C_YELLOW "SPIN THE WHEEL!" C_RESET "\n");
             printf("4. " C_RED "Cancel Last Bet (Undo)" C_RESET "\n");
+        }
+        if (num_active_bets == 0 && num_previous_bets > 0) {
+            printf("5. " C_MAGENTA "Rebet (Place same bets as last spin)" C_RESET "\n");
         }
         printf("Action: ");
 
@@ -526,6 +505,22 @@ void play_roulette(Player* player) {
             add_balance_safe(player, active_bets[num_active_bets].amount);
             save_player(player);
             printf("\n" C_GREEN "Last bet cancelled successfully. $%d refunded." C_RESET "\n", active_bets[num_active_bets].amount);
+            delay_ms(1500);
+        }
+        else if (action == 5 && num_active_bets == 0 && num_previous_bets > 0) {
+            int total_rebet = 0;
+            for (int i = 0; i < num_previous_bets; i++) total_rebet += previous_bets[i].amount;
+
+            if (total_rebet > player->balance) {
+                display_error(2000, "Insufficient funds to repeat last round's bets ($%d)!", total_rebet);
+                continue;
+            }
+
+            memcpy(active_bets, previous_bets, sizeof(Bet) * num_previous_bets);
+            num_active_bets = num_previous_bets;
+            player->balance -= total_rebet;
+
+            printf("" C_GREEN "Successfully placed all previous bets! Total: $%d" C_RESET "\n", total_rebet);
             delay_ms(1500);
         }
         else if (action == 3 && num_active_bets > 0) {
@@ -586,6 +581,8 @@ void play_roulette(Player* player) {
             }
 
             save_player(player);
+            memcpy(previous_bets, active_bets, sizeof(Bet)* num_active_bets);
+            num_previous_bets = num_active_bets;
             num_active_bets = 0;
 
             prompt_continue("Press ENTER to clear table for the next spin...");

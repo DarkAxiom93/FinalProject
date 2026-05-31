@@ -6,10 +6,11 @@
 #include "utils.h"
 #include "account.h"
 
+
 // חתימת אבטחה ב-64-ביט המונעת חיתוך נתונים והתנגשויות
 static long long calculate_checksum(Player* p) {
-    return (((long long)p->balance * casino_salt_1) ^ ((long long)p->bank_balance * casino_salt_2)) +
-        (((long long)p->total_winnings * 5039LL) ^ (long long)p->total_losses) ^ casino_secret_key;
+    return (((long long)p->balance * get_salt_1()) ^ ((long long)p->bank_balance * get_salt_2())) +
+        (((long long)p->total_winnings * 5039LL) ^ (long long)p->total_losses) ^ get_secret_key();
 }
 
 void load_player(Player* p) {
@@ -140,7 +141,7 @@ void handle_withdrawal(Player* p) {
         delay_ms(2500);
     }
     // הגנה 2: מניעת עקיפת מגבלת הארנק (Wallet Overflow Bypass)
-    else if (p->balance + amount > MAX_BALANCE) {
+    else if ((long long)p->balance + amount > MAX_BALANCE) {
         int max_withdraw = MAX_BALANCE - p->balance;
         if (max_withdraw <= 0) {
             display_error(2500, "Your wallet is completely full! You cannot withdraw any more funds.");
@@ -187,7 +188,7 @@ void handle_deposit(Player* p) {
         int amount = get_safe_int();
         if (amount <= 0) return;
 
-        if (p->balance + amount > MAX_BALANCE) {
+        if ((long long)p->balance + amount > MAX_BALANCE) {
             display_error(2000, "Exceeds wallet limit! You can only hold up to $%d in your wallet.", MAX_BALANCE);
         }
         else {
@@ -209,7 +210,7 @@ void handle_deposit(Player* p) {
             display_error(2000, "You don't have that much money in your wallet!");
         }
         // הגנה 2: חסימת הצפת הכספת (Bank Overflow)
-        else if (p->bank_balance + amount > MAX_BANK_BALANCE) {
+        else if ((long long)p->bank_balance + amount > MAX_BANK_BALANCE) {
             display_error(2500, "Bank vault capacity reached! Maximum allowed in safe is $%d.", MAX_BANK_BALANCE);
         }
         else {

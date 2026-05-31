@@ -1,4 +1,7 @@
-﻿#define _CRT_SECURE_NO_WARNINGS
+﻿//Known:
+// //Limitation : Evaluation engine currently resolves ties based on primary hand value and ignores kicker cards(leads to slightly higher Push rate).
+
+#define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -98,7 +101,6 @@ static int evaluate_poker_hand(Card hand[], int count) {
     if (straight_flush_high > 0) return SCORE_STRAIGHT_FLUSH + straight_flush_high; // שימוש במשתנה החדש!
     if (quads > 0) return SCORE_FOUR_OF_A_KIND + max_rank;
     if (trips > 0 && pairs > 0) return SCORE_FULL_HOUSE + highest_trip;
-    if (trips > 1) return SCORE_FULL_HOUSE + highest_trip;
     if (is_flush) return SCORE_FLUSH + max_rank;
     if (straight_high > 0) return SCORE_STRAIGHT + straight_high;
     if (trips > 0) return SCORE_THREE_OF_A_KIND + highest_trip;
@@ -301,19 +303,14 @@ void play_poker(Player* player) {
         // ==========================================
         // שלב 4: חשיפה והערכת ידיים (Showdown)
         // ==========================================
-        print_cards_ascii(dealer_cards, 2, "Dealer Reveals Hand", 0);
 
-        Card p_eval[7] = { 0 }, d_eval[7] = { 0 };
-        for (int i = 0; i < 5; i++) { p_eval[i] = community[i]; d_eval[i] = community[i]; }
+        // 1. הערכת היד של השחקן (מתבצעת תמיד, גם אם קופלנו, בשביל ה-Trips)
+        Card p_eval[7] = { 0 };
+        for (int i = 0; i < 5; i++) { p_eval[i] = community[i]; }
         p_eval[5] = player_cards[0]; p_eval[6] = player_cards[1];
-        d_eval[5] = dealer_cards[0]; d_eval[6] = dealer_cards[1];
-
         int p_score = evaluate_poker_hand(p_eval, 7);
-        int d_score = evaluate_poker_hand(d_eval, 7);
 
-        printf("\nYour Best Hand  : " C_GREEN "%s" C_RESET "\n", get_hand_name(p_score));
-        printf("Dealer Best Hand: " C_RED "%s" C_RESET "\n", get_hand_name(d_score));
-
+        // 2. בדיקת זכייה ב-Trips (מתבצעת תמיד, win or lose or fold)
         if (trips > 0) {
             int trips_win = 0;
             if (p_score >= SCORE_STRAIGHT_FLUSH) trips_win = trips * 50;
@@ -324,7 +321,7 @@ void play_poker(Player* player) {
             else if (p_score >= SCORE_THREE_OF_A_KIND) trips_win = trips * 3;
 
             if (trips_win > 0) {
-                printf("\n" C_GREEN "TRIPS BET WON! Payout: $%d" C_RESET "\n", trips_win);
+                printf("\n" C_GREEN "TRIPS BET WON! Your final hand was %s! Payout: $%d" C_RESET "\n", get_hand_name(p_score), trips_win);
                 player->total_winnings += trips_win;
                 add_balance_safe(player, trips + trips_win);
             }
@@ -334,7 +331,29 @@ void play_poker(Player* player) {
             }
         }
 
+        // 3. חשיפת הדילר והשוואת ידיים - רק אם השחקן נשאר במשחק!
         if (!has_folded) {
+            printf("\n" C_YELLOW "Dealer is flipping their hole cards..." C_RESET "\n");
+
+            // מותחים את השחקן
+            for (int i = 0; i < 3; i++) {
+                printf(". ");
+                fflush(stdout);
+                delay_ms(500);
+            }
+            printf("\n");
+
+            print_cards_ascii(dealer_cards, 2, "Dealer Reveals Hand", 0);
+            delay_ms(1000); // נותנים לשחקן שנייה לעכל את הקלפים
+
+            Card d_eval[7] = { 0 };
+            for (int i = 0; i < 5; i++) { d_eval[i] = community[i]; }
+            d_eval[5] = dealer_cards[0]; d_eval[6] = dealer_cards[1];
+            int d_score = evaluate_poker_hand(d_eval, 7);
+
+            printf("\nYour Best Hand  : " C_GREEN "%s" C_RESET "\n", get_hand_name(p_score));
+            printf("Dealer Best Hand: " C_RED "%s" C_RESET "\n", get_hand_name(d_score));
+
             if (p_score > d_score) {
                 int total_win = (ante * 2) + (play_bet * 2);
                 int blind_win = blind;
@@ -360,6 +379,10 @@ void play_poker(Player* player) {
                 printf("\n" C_YELLOW "PUSH (TIE)! Main bets returned." C_RESET "\n");
                 add_balance_safe(player, ante + blind + play_bet);
             }
+        }
+        else {
+            // התראה קצרה ומהירה שחוסכת לשחקן את זמן האנימציה של הדילר
+            printf("\n" C_YELLOW "Main hand skipped because you folded pre-river." C_RESET "\n");
         }
         save_player(player);
         // חשוב! מניעת דליפת זיכרון בסוף הסיבוב

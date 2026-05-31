@@ -8,25 +8,15 @@
 #include "graphics.h"
 #include "account.h"
 
-// מערך של סמלים למכונת המזל
-const char* slot_symbols[] = {
-    "" C_RED "[ 7 ]" C_RESET "", // 0: שבע אדום (ג'קפוט)
-    "" C_YELLOW "[ $ ]" C_RESET "", // 1: דולר זהב
-    "" C_GREEN "[ # ]" C_RESET "", // 2: סולמית ירוקה
-    "" C_MAGENTA "[ @ ]" C_RESET "", // 3: שטרודל סגול
-    "" C_CYAN "[ * ]" C_RESET ""  // 4: כוכב תכלת
-};
 
-// פונקציה שמציירת את המכונה עם האנימציה
-static void draw_slot_machine(int s1, int s2, int s3) {
-    printf("\n");
-    printf("   .-----------------------.\n");
-    printf("   |  " C_YELLOW "C A S I N O   S L O T" C_RESET "  |\n");
-    printf("   |-----------------------|\n");
-    printf("   |                       |\n");
-    printf("   |   %s %s %s  |\n", slot_symbols[s1], slot_symbols[s2], slot_symbols[s3]);
-    printf("   |                       |\n");
-    printf("   '-----------------------'\n");
+
+static int get_weighted_symbol() {
+    int r = rand() % 100;
+    if (r < 5) return 0;       // 5% chance for [ 7 ] (Jackpot symbol)
+    else if (r < 20) return 1; // 15% chance for [ $ ]
+    else if (r < 45) return 2; // 25% chance for [ # ]
+    else if (r < 75) return 3; // 30% chance for [ @ ]
+    else return 4;             // 25% chance for [ * ]
 }
 
 void play_slots(Player* player) {
@@ -85,6 +75,10 @@ void play_slots(Player* player) {
             fflush(stdout);
             delay_ms(80 + (i * 10));
         }
+        // הגרלת התוצאה האמיתית ממשקולות קזינו חוקיות (RTP ~92%)
+        r1 = get_weighted_symbol();
+        r2 = get_weighted_symbol();
+        r3 = get_weighted_symbol();
         printf("\n");
 
         // הגרלת התוצאה האמיתית מתוך הליבה המאובטחת

@@ -29,6 +29,7 @@ typedef struct {
 
 // הצהרות על פונקציות מערכת מרכזיות
 void print_roulette_board();
+int get_number_color(int number);
 void play_roulette(Player* p);
 void play_blackjack(Player* p); // הוסף את השורה הזו
 void play_football(Player* p); // המחליף של קראפס

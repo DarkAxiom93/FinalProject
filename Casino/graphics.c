@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "utils.h" // כדי להשתמש בצבעים שלנו
 #include "graphics.h"
+#include "casino.h"
 
 // ==========================================
 // ROULETTE GRAPHICS
@@ -32,6 +33,46 @@ void print_roulette_welcome() {
     printf(C_GREEN "Press ENTER to acknowledge rules and join the table..." C_RESET "");
     wait_for_enter();
     clear_screen();
+}
+
+
+void print_roulette_board() {
+    printf("\n");
+    printf(BG_GREEN TEXT_WHITE "   00    " C_RESET);
+    for (int i = 3; i <= 36; i += 3) {
+        if (get_number_color(i) == 1) printf(BG_RED TEXT_WHITE "  %2d   " C_RESET, i);
+        else printf(BG_BLACK TEXT_WHITE "  %2d   " C_RESET, i);
+    }
+    printf("\n");
+
+    printf(BG_GREEN TEXT_WHITE "         " C_RESET);
+    for (int i = 2; i <= 35; i += 3) {
+        if (get_number_color(i) == 1) printf(BG_RED TEXT_WHITE "  %2d   " C_RESET, i);
+        else printf(BG_BLACK TEXT_WHITE "  %2d   " C_RESET, i);
+    }
+    printf("\n");
+
+    printf(BG_GREEN TEXT_WHITE "    0    " C_RESET);
+    for (int i = 1; i <= 34; i += 3) {
+        if (get_number_color(i) == 1) printf(BG_RED TEXT_WHITE "  %2d   " C_RESET, i);
+        else printf(BG_BLACK TEXT_WHITE "  %2d   " C_RESET, i);
+    }
+    printf("\n");
+
+    printf("         ");
+    printf(BG_GREEN TEXT_WHITE "           1st 12           " C_RESET);
+    printf(BG_GREEN TEXT_WHITE "           2nd 12           " C_RESET);
+    printf(BG_GREEN TEXT_WHITE "           3rd 12           " C_RESET);
+    printf("\n");
+
+    printf("         ");
+    printf(BG_GREEN TEXT_WHITE "     1-18     " C_RESET);
+    printf(BG_GREEN TEXT_WHITE "     Even     " C_RESET);
+    printf(BG_RED TEXT_WHITE   "     Red      " C_RESET);
+    printf(BG_BLACK TEXT_WHITE "    Black     " C_RESET);
+    printf(BG_GREEN TEXT_WHITE "     Odd      " C_RESET);
+    printf(BG_GREEN TEXT_WHITE "     19-36    " C_RESET);
+    printf("\n\n");
 }
 
 // ==========================================
@@ -122,6 +163,26 @@ void print_roulette_welcome() {
      wait_for_enter();
      clear_screen();
  }
+ // פונקציה שמציירת את המכונה עם האנימציה
+  void draw_slot_machine(int s1, int s2, int s3) {
+     printf("\n");
+     printf("   .-----------------------.\n");
+     printf("   |  " C_YELLOW "C A S I N O   S L O T" C_RESET "  |\n");
+     printf("   |-----------------------|\n");
+     printf("   |                       |\n");
+     printf("   |   %s %s %s  |\n", slot_symbols[s1], slot_symbols[s2], slot_symbols[s3]);
+     printf("   |                       |\n");
+     printf("   '-----------------------'\n");
+ }
+
+ // מערך של סמלים למכונת המזל
+ const char* slot_symbols[] = {
+     "" C_RED "[ 7 ]" C_RESET "", // 0: שבע אדום (ג'קפוט)
+     "" C_YELLOW "[ $ ]" C_RESET "", // 1: דולר זהב
+     "" C_GREEN "[ # ]" C_RESET "", // 2: סולמית ירוקה
+     "" C_MAGENTA "[ @ ]" C_RESET "", // 3: שטרודל סגול
+     "" C_CYAN "[ * ]" C_RESET ""  // 4: כוכב תכלת
+ };
 
 // ==========================================
 // FOOTBALL GRAPHICS

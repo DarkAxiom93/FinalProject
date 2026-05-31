@@ -14,7 +14,7 @@
 #ifdef ENABLE_ADMIN_PANEL
 
 void admin_panel(Player* p) {
-    system("cls");
+    clear_screen();
     printf("\x1b[41m\x1b[97m SYSTEM RESTRICTED AREA " C_RESET "\n");
     printf("Enter Admin Password: ");
 
@@ -49,8 +49,7 @@ void admin_panel(Player* p) {
 
     unsigned int pass_hash = hash_password(pass); // שימוש באלגוריתם המאובטח
 
-    // כרגע מכוון ל-0 כדי לזרוק אותך החוצה ולהדפיס את ההאש החדש שלך!
-    unsigned int expected_hash = 4168410452U;
+    unsigned int expected_hash = get_admin_hash();
 
     if (pass_hash != expected_hash) {
         printf("" C_RED "ACCESS DENIED. INCORRECT PASSWORD." C_RESET "\n");
