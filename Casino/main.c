@@ -125,6 +125,7 @@ static void display_leaderboard() {
 }
 
 int main() {
+    SetConsoleTitleA("Ultimate Casino Simulator - VIP Edition");
     hide_cursor();
     CreateDirectory("data", NULL);
 

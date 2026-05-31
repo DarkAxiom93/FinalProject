@@ -4,31 +4,32 @@
 #include <time.h>
 #include "casino.h"
 #include "utils.h"
-#include <conio.h> // מאפשרת שימוש ב-_getch() לקריאת מקשים מיידית
+#include <conio.h> 
 #include "graphics.h"
 #include "account.h"
 
-
-
 static int get_weighted_symbol() {
     int r = rand() % 100;
-    if (r < 5) return 0;       // 5% chance for [ 7 ] (Jackpot symbol)
-    else if (r < 20) return 1; // 15% chance for [ $ ]
-    else if (r < 45) return 2; // 25% chance for [ # ]
-    else if (r < 75) return 3; // 30% chance for [ @ ]
-    else return 4;             // 25% chance for [ * ]
+    if (r < 5) return 0;
+    else if (r < 20) return 1;
+    else if (r < 45) return 2;
+    else if (r < 75) return 3;
+    else return 4;
 }
 
 void play_slots(Player* player) {
     int is_playing = 1;
     print_slots_welcome();
 
-    int bet = 0; // משתנה שיזכור את ההימור הנוכחי לאורך הסיבובים
+    int bet = 0;
+
+    // מערך דינאמי ומונה עבור היסטוריית הרווחים/הפסדים פר סיבוב
+    int* session_history = NULL;
+    int history_count = 0;
 
     while (is_playing) {
         print_table_header("SLOT MACHINE", "" C_YELLOW "", player->balance);
 
-        // שלב א': אם זה הסיבוב הראשון או שהחלטנו להחליף הימור
         if (bet == 0) {
             printf("Options: [0] Leave Machine  [1] Insert Coin (Bet)\nAction: ");
             int action = get_safe_int();
@@ -44,11 +45,9 @@ void play_slots(Player* player) {
             bet = get_safe_int();
         }
         else {
-            // אם המשחק ממשיך ברצף, נציג את ההימור הנוכחי שרץ
             printf("Current Bet: $%d (Running automatically)\n", bet);
         }
 
-        // בדיקת תקינות ההימור והיתרה
         if (bet <= 0 || bet > player->balance) {
             display_error(1500, "Invalid amount or insufficient funds!");
             bet = 0;
@@ -65,48 +64,46 @@ void play_slots(Player* player) {
         save_player(player);
         printf("\n" C_CYAN "Spinning the reels..." C_RESET "\n");
 
-        // אנימציית גלילה מבוססת מנוע ויזואלי - אינה פולטת נתונים על המחולל הראשי
-        int r1, r2, r3;
+        // הקצאה דינאמית לתוצאות הגלגלים
+        int* reels = (int*)malloc(3 * sizeof(int));
+        if (reels == NULL) {
+            display_error(2000, "Memory allocation failed for reels!");
+            break;
+        }
+
         for (int i = 0; i < 15; i++) {
-            r1 = visual_rand() % 5;
-            r2 = visual_rand() % 5;
-            r3 = visual_rand() % 5;
-            printf("\r   [ %s %s %s ]   ", slot_symbols[r1], slot_symbols[r2], slot_symbols[r3]);
+            int v1 = visual_rand() % 5;
+            int v2 = visual_rand() % 5;
+            int v3 = visual_rand() % 5;
+            printf("\r   [ %s %s %s ]   ", slot_symbols[v1], slot_symbols[v2], slot_symbols[v3]);
             fflush(stdout);
             delay_ms(80 + (i * 10));
         }
-        // הגרלת התוצאה האמיתית ממשקולות קזינו חוקיות (RTP ~92%)
-        r1 = get_weighted_symbol();
-        r2 = get_weighted_symbol();
-        r3 = get_weighted_symbol();
         printf("\n");
 
-        // הגרלת התוצאה האמיתית מתוך הליבה המאובטחת
-        r1 = rand() % 5;
-        r2 = rand() % 5;
-        r3 = rand() % 5;
+        reels[0] = rand() % 5;
+        reels[1] = rand() % 5;
+        reels[2] = rand() % 5;
 
-        // הצגת התוצאה הסופית הקובעת
-        draw_slot_machine(r1, r2, r3);
+        draw_slot_machine(reels[0], reels[1], reels[2]);
 
-        // חישוב זכיות
         int payout = 0;
-        if (r1 == 0 && r2 == 0 && r3 == 0) {
+        if (reels[0] == 0 && reels[1] == 0 && reels[2] == 0) {
             payout = bet * 50;
             printf("\n" C_RED "*** J A C K P O T ***" C_RESET "\n");
             play_jackpot_sound();
             printf("" C_GREEN "UNBELIEVABLE! You hit three 7s and won $%d!" C_RESET "\n", payout);
         }
-        else if (r1 == r2 && r2 == r3) {
+        else if (reels[0] == reels[1] && reels[1] == reels[2]) {
             payout = bet * 10;
             play_win_sound();
             printf("\n" C_GREEN "BIG WIN! Three of a kind! You won $%d!" C_RESET "\n", payout);
         }
-        else if ((r1 == 0 && r2 == 0) || (r1 == 0 && r3 == 0) || (r2 == 0 && r3 == 0)) {
+        else if ((reels[0] == 0 && reels[1] == 0) || (reels[0] == 0 && reels[2] == 0) || (reels[1] == 0 && reels[2] == 0)) {
             payout = bet * 5;
             printf("\n" C_GREEN "NICE! Two 7s! You won $%d!" C_RESET "\n", payout);
         }
-        else if (r1 == r2 || r1 == r3 || r2 == r3) {
+        else if (reels[0] == reels[1] || reels[0] == reels[2] || reels[1] == reels[2]) {
             payout = bet * 2;
             printf("\n" C_GREEN "Small Win! Two of a kind! You won $%d!" C_RESET "\n", payout);
         }
@@ -115,21 +112,27 @@ void play_slots(Player* player) {
             player->total_losses += bet;
         }
 
-        // קוד חדש ומבוקר:
+        // חישוב נטו לסיבוב ועדכון ההיסטוריה הדינמית ב-realloc
+        int net_profit = (payout > 0) ? (payout - bet) : -bet;
+        int* temp = (int*)realloc(session_history, (history_count + 1) * sizeof(int));
+        if (temp != NULL) {
+            session_history = temp;
+            session_history[history_count++] = net_profit;
+        }
+
         if (payout > 0) {
-            player->total_winnings += ((long long)payout - bet); // עדכון הסטטיסטיקה נשאר כרגיל
-            add_balance_safe(player, payout);         // הזרמה מבוקרת של הכסף
+            player->total_winnings += ((long long)payout - bet);
+            add_balance_safe(player, payout);
         }
 
         save_player(player);
+        free(reels); // שחרור מערך הגלגלים הדינמי בכל סיבוב
 
-        // בדיקת פשיטת רגל (אם היתרה התאפסה, המנוע של main יטפל בזה)
         if (player->balance <= 0) {
             is_playing = 0;
             break;
         }
 
-        // שלב ב': תפריט המקשים המהיר ללא לחיצה על Enter
         printf("\n--------------------------------------------------\n");
         printf(" -> Press [" C_GREEN "SPACE" C_RESET "] to spin again with the same bet ($%d)\n", bet);
         printf(" -> Press [" C_YELLOW "C" C_RESET "] to change bet amount\n");
@@ -137,21 +140,44 @@ void play_slots(Player* player) {
         printf("--------------------------------------------------\n");
 
         clear_input_buffer();
-
         char key = ' ';
         while (1) {
-            key = (char)_getch(); // קליטת מקש בודד מיידית
+            key = (char)_getch();
             if (key == ' ' || key == 'c' || key == 'C' || key == '0') {
-                break; // יציאה מלולאת ההמתנה למקש חוקי
+                break;
             }
         }
 
         if (key == '0') {
-            is_playing = 0; // יוצא לתפריט הראשי
+            is_playing = 0;
         }
         else if (key == 'c' || key == 'C') {
-            bet = 0; // מאפס את ההימור כדי שהלולאה הבאה תבקש הימור חדש
+            bet = 0;
         }
-        // אם נלחץ ' ', הלולאה פשוט תמשיך לסיבוב הבא עם אותו סכום בדיוק!
+    }
+
+    // הדפסת סיכום מושקע מהמערך הדינמי לפני היציאה
+    if (session_history != NULL && history_count > 0) {
+        clear_screen();
+        printf("\n" C_CYAN "========================================" C_RESET "\n");
+        printf("       SLOTS SESSION HISTORY LOG        \n");
+        printf("" C_CYAN "========================================" C_RESET "\n");
+        int total_net = 0;
+        for (int i = 0; i < history_count; i++) {
+            total_net += session_history[i];
+            if (i < 10) { // מציג עד 10 סיבובים אחרונים כדי לא להציף את המסך
+                if (session_history[i] > 0)
+                    printf(" Spin %d: " C_GREEN "+$%d" C_RESET "\n", i + 1, session_history[i]);
+                else
+                    printf(" Spin %d: " C_RED "-$%d" C_RESET "\n", i + 1, -session_history[i]);
+            }
+        }
+        if (history_count > 10) printf(" ... and %d more spins.\n", history_count - 10);
+        printf("----------------------------------------\n");
+        if (total_net > 0) printf(" Session Total: " C_GREEN "+$%d Profit!" C_RESET "\n", total_net);
+        else printf(" Session Total: " C_RED "-$%d Loss" C_RESET "\n", -total_net);
+
+        free(session_history); // שחרור המערך הדינמי של ההיסטוריה לפני החזרה לתפריט
+        prompt_continue(NULL);
     }
 }

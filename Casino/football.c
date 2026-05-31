@@ -60,10 +60,18 @@ void play_football(Player* player) {
     int is_playing = 1; // לולאה חיצונית: שליטה על כל מודול הכדורגל
 
     while (is_playing) {
-        Match slip[NUM_MATCHES] = { 0 };
+        // הקצאה דינמית לטופס המשחקים במקום מערך סטטי
+        Match* slip = (Match*)calloc(NUM_MATCHES, sizeof(Match));
+        // הקצאה דינמית למערך האינדקסים למניעת בחירה כפולה
+        int* used_indices = (int*)calloc(POOL_SIZE, sizeof(int));
 
-        // מערך עזר למניעת בחירה כפולה של אותה קבוצה באותו טופס
-        int used_indices[POOL_SIZE] = { 0 };
+        // בדיקת בטיחות להקצאת הזיכרון
+        if (slip == NULL || used_indices == NULL) {
+            display_error(2000, "CRITICAL ERROR: Memory allocation failed for football slip!");
+            if (slip) free(slip);
+            if (used_indices) free(used_indices);
+            return;
+        }
 
         // הגרלת משחקים וקבוצות דינמיות לחלוטין לסיבוב הנוכחי
         for (int i = 0; i < NUM_MATCHES; i++) {
@@ -90,7 +98,7 @@ void play_football(Player* player) {
             slip[i].odds_2 = 1.9f + ((double)rand() / 4294967295.0) * 1.5;
         }
 
-        int same_slip = 1; // לולאה פנימית: שליטה על משחק עם אותו טופס (אותן קבוצות ויחסים)
+        int same_slip = 1; // לולאה פנימית: שליטה על משחק עם אותו טופס
 
         while (same_slip) {
             clear_screen();
@@ -126,14 +134,12 @@ void play_football(Player* player) {
                     total_slip_odds *= slip[i].odds_2;
                     active_bets_count++;
                 }
-                // אם המשתמש בחר ב-0 (S) - אנחנו לא מכפילים את היחס ולא מעלים את מונה ההימורים הפעילים
             }
 
-            // הגנה מפני מצב שבו המשתמש דילג על כל שלושת המשחקים
             if (active_bets_count == 0) {
                 printf("\n" C_YELLOW "You skipped all matches on the slip. Ticket cancelled." C_RESET "\n");
                 delay_ms(2500);
-                same_slip = 0; // שובר את הלולאה הפנימית כדי לאפשר הגרלת טופס חדש או יציאה
+                same_slip = 0;
                 continue;
             }
 
@@ -143,7 +149,7 @@ void play_football(Player* player) {
 
             if (bet <= 0 || bet > player->balance) {
                 display_error(2500, "Invalid amount or insufficient funds! Ticket cancelled.");
-                continue; // מחזיר אותו לתחילת הלולאה הפנימית - הטופס נשמר והוא יכול למלא אותו שוב!
+                continue;
             }
 
             if (bet > MAX_BET) {
@@ -157,36 +163,31 @@ void play_football(Player* player) {
             printf("\n" C_CYAN "Matches are live! Simulating scores..." C_RESET "\n");
             for (int i = 0; i < 4; i++) {
                 printf("Goal updates coming in... %d'\n", (i + 1) * 20);
-                // השהיה דינמית ומותחת בין 400 ל-1200 מילישניות (הופעל מנגנון ה-visual_rand)
                 delay_ms(400 + (visual_rand() % 800));
             }
 
-            // הגרלת תוצאות המשחקים ובדיקת הטופס
             int hit_all = 1;
             printf("\n" C_YELLOW "=================== SLIP RESULTS ===================" C_RESET "\n");
             for (int i = 0; i < NUM_MATCHES; i++) {
-                // הגרלת תוצאת אמת: 1=בית (45%), 2=תיקו (25%), 3=חוץ (30%)
                 int r = rand() % 100;
                 if (r < 45) slip[i].actual_outcome = 1;
                 else if (r < 70) slip[i].actual_outcome = 2;
                 else slip[i].actual_outcome = 3;
 
-                // ייצור תוצאת סיום (שערים) ריאליסטית שתואמת להכרעה
                 int home_goals = 0, away_goals = 0;
-                if (slip[i].actual_outcome == 1) { // ניצחון בית
-                    home_goals = (rand() % 4) + 1; // 1 עד 4 שערים
-                    away_goals = rand() % home_goals; // תמיד פחות משערי הבית
+                if (slip[i].actual_outcome == 1) {
+                    home_goals = (rand() % 4) + 1;
+                    away_goals = rand() % home_goals;
                 }
-                else if (slip[i].actual_outcome == 2) { // תיקו
-                    home_goals = rand() % 4; // 0 עד 3 שערים
-                    away_goals = home_goals; // זהה
+                else if (slip[i].actual_outcome == 2) {
+                    home_goals = rand() % 4;
+                    away_goals = home_goals;
                 }
-                else { // ניצחון חוץ
-                    away_goals = (rand() % 4) + 1; // 1 עד 4 שערים
-                    home_goals = rand() % away_goals; // תמיד פחות משערי החוץ
+                else {
+                    away_goals = (rand() % 4) + 1;
+                    home_goals = rand() % away_goals;
                 }
 
-                // תצוגת UI משודרגת לכל משחק
                 printf("\n" C_CYAN "[ MATCH %d ]" C_RESET " %s vs %s\n", i + 1, slip[i].home_team, slip[i].away_team);
                 printf("FINAL SCORE: " C_WHITE "%d - %d" C_RESET " (%s)\n", home_goals, away_goals, outcome_to_str(slip[i].actual_outcome));
 
@@ -201,13 +202,12 @@ void play_football(Player* player) {
                     }
                     else {
                         printf("Status     : " C_RED "[ X ] MISS" C_RESET "\n");
-                        hit_all = 0; // פגיעה שנכשלה פוסלת את הטופס
+                        hit_all = 0;
                     }
                 }
                 printf("----------------------------------------------------\n");
             }
 
-            // חישוב זכיות/הפסדים
             if (hit_all) {
                 int winnings = (int)(bet * total_slip_odds);
                 printf("\n" C_GREEN "!!! WOW !!! YOU HIT THE WINNER SLIP !!!" C_RESET "\n");
@@ -222,9 +222,6 @@ void play_football(Player* player) {
 
             save_player(player);
 
-            // ==========================================
-            // תפריט סיום סיבוב - UX מתקדם לניווט בלולאות
-            // ==========================================
             printf("\n====================================================\n");
             printf("Options:\n");
             printf("[1] Play this exact slip again (Same Teams & Odds)\n");
@@ -236,21 +233,22 @@ void play_football(Player* player) {
 
             if (post_game_action == 0) {
                 same_slip = 0;
-                is_playing = 0; // שובר את שתי הלולאות ויוצא לתפריט הראשי
+                is_playing = 0;
             }
             else if (post_game_action == 2) {
-                same_slip = 0; // שובר רק את הלולאה הפנימית כדי לאתחל טופס חדש
+                same_slip = 0;
             }
-            // אם בחר 1, הלולאות ממשיכות לרוץ כרגיל והמשתמש יהמר שוב על אותו מערך
 
-            // בדיקת פשיטת רגל לפני הסיבוב הבא (אלא אם הוא כבר בחר לצאת)
             if (player->balance <= 0 && is_playing) {
                 printf("\n" C_RED "You are out of funds in your wallet!" C_RESET "\n");
                 delay_ms(2000);
                 same_slip = 0;
                 is_playing = 0;
             }
+        }
 
-        } // סיום הלולאה הפנימית (same_slip)
-    } // סיום הלולאה החיצונית (is_playing)
+        // שחרור הזיכרון הדינמי החיוני למניעת דליפות (Memory Leaks)
+        free(slip);
+        free(used_indices);
+    }
 }
