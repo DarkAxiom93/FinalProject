@@ -21,33 +21,24 @@ void load_player(Player* p) {
     p->balance = 1000; p->bank_balance = 0; p->total_winnings = 0; p->total_losses = 0;
     char filename[MAX_NAME_LEN + 15];
     snprintf(filename, sizeof(filename), "data/%s.bin", p->name);
-
-    // קריאה בינארית לתוך חוצץ (Buffer) כי המידע מוצפן
     FILE* file = fopen(filename, "rb");
 
     if (file != NULL) {
-        // חישוב תפוסת זיכרון לשמירת עתיד (Future-Proofing):
-        // מקסימום תווים צפוי: VERSION(2) + NAME(49) + 5 נתונים של 64-ביט (עד 20 תווים כ"א) + ירידות שורה.
-        // סך הכל כ-160 תווים בלחץ. הקצאה של 1024 תווים מספקת מרווח ביטחון נדיב מאוד.
         char buffer[1024] = { 0 };
         int len = (int)fread(buffer, 1, sizeof(buffer) - 1, file);
         fclose(file);
 
         if (len > 0) {
-            // פענוח צופן הזרם
             crypt_buffer(buffer, len);
-            buffer[len] = '\0'; // אבטחת סיום מחרוזת
-
+            buffer[len] = '\0';
             long long loaded_checksum = 0;
-            // שאיבת הנתונים מהטקסט המפוענח שבתוך החוצץ
-            int file_version = 0; // משתנה זמני לבדיקת הגרסה
+            int file_version = 0; 
 
-            // שימוש ב-sscanf עם הפרמטר החדש (הגרסה)
             int read_count = sscanf(buffer, "%d\n%49s\n%d\n%d\n%lld\n%lld\n%lld",
                 &file_version, p->name, &p->balance, &p->bank_balance,
                 &p->total_winnings, &p->total_losses, &loaded_checksum);
 
-            if (read_count >= 6) { // אם קראנו לפחות את הנתונים הבסיסיים
+            if (read_count >= 6) { 
                 if (file_version < SAVE_FILE_VERSION) {
                     printf(C_YELLOW "Detected legacy save file! Upgrading to v%d..." C_RESET "\n", SAVE_FILE_VERSION);
                     // כאן אפשר להוסיף לוגיקה להשלמת נתונים חסרים אם נרצה בעתיד
@@ -95,14 +86,10 @@ void save_player(Player* p) {
         long long checksum = calculate_checksum(p);
         char buffer[1024] = { 0 };
 
-        // כתיבת הטקסט הברור לתוך חוצץ (Buffer)
         int len = snprintf(buffer, sizeof(buffer), "%d\n%s\n%d\n%d\n%lld\n%lld\n%lld\n",
             SAVE_FILE_VERSION, p->name, p->balance, p->bank_balance,
             p->total_winnings, p->total_losses, checksum);
-        // הצפנת כל תוכן החוצץ
         crypt_buffer(buffer, len);
-
-        // כתיבת הבינארי המוצפן לקובץ
         fwrite(buffer, 1, len, file);
         fclose(file);
 
@@ -160,7 +147,7 @@ void handle_withdrawal(Player* p) {
     }
 }
 
-// פונקציית הקופאי המעודכנת - מנהלת גם הפקדות לקזינו וגם משיכות/הפקדות לבנק
+// פונקציית הקופאי  - מנהלת גם הפקדות לקזינו וגם משיכות/הפקדות לבנק
 void handle_deposit(Player* p) {
     clear_screen();
     print_table_header("CASINO CASHIER", "" C_GREEN "", p->balance);
@@ -177,7 +164,7 @@ void handle_deposit(Player* p) {
     int sub_choice = get_safe_int();
 
     if (sub_choice == 1) {
-        // פעולה 1: הפקדת כסף מבחוץ לתוך הארנק (ATM)
+        // פעולה 1: הפקדת כסף מבחוץ לתוך הארנק 
         if (p->balance >= MAX_BALANCE) {
             printf("\n" C_YELLOW "Wallet is already full." C_RESET "\n");
             delay_ms(2000);
@@ -209,7 +196,7 @@ void handle_deposit(Player* p) {
         if (amount > p->balance) {
             display_error(2000, "You don't have that much money in your wallet!");
         }
-        // הגנה 2: חסימת הצפת הכספת (Bank Overflow)
+        // הגנה 2: חסימת הצפת הכספת 
         else if ((long long)p->bank_balance + amount > MAX_BANK_BALANCE) {
             display_error(2500, "Bank vault capacity reached! Maximum allowed in safe is $%d.", MAX_BANK_BALANCE);
         }
@@ -231,7 +218,6 @@ void handle_deposit(Player* p) {
 void add_balance_safe(Player* p, int amount) {
     if (amount <= 0) return;
 
-    // שימוש ב-long long למניעת גלישה נומרית בזמן הבדיקה
     long long potential_balance = (long long)p->balance + amount;
 
     if (potential_balance > MAX_BALANCE) {
@@ -241,15 +227,11 @@ void add_balance_safe(Player* p, int amount) {
         // בדיקה האם חשבון הבנק יכול לקלוט את העודף
         if ((long long)p->bank_balance + overflow > MAX_BANK_BALANCE) {
             int allowed_to_bank = MAX_BANK_BALANCE - p->bank_balance;
-            int uncredited = overflow - allowed_to_bank; // הסכום שמעבר לתקרה
-
+            int uncredited = overflow - allowed_to_bank; 
             p->bank_balance = MAX_BANK_BALANCE;
-
-            // תיקון קריטי לסטטיסטיקה: החסרת הכסף שנחתם מתקרת הזכיות
-            // כדי שהסטטיסטיקה תציג אך ורק את הכסף שבאמת נכנס לשחקן
             p->total_winnings -= uncredited;
 
-            // תצוגת UX חדשה ומקצועית - House Limit
+            // House Limit
             printf("\n" C_YELLOW "==================================================" C_RESET "\n");
             printf("" C_RED "   NOTICE: CASINO MAXIMUM PAYOUT CAP REACHED" C_RESET "\n");
             printf("==================================================\n");

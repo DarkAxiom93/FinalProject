@@ -25,18 +25,15 @@ static int calculate_hand_value(Card* hand, int count) {
 }
 
 static int is_soft_17(Card* hand, int count) {
-    // 1. קודם כל נבדוק אם הערך המקוזז האמיתי הוא בכלל 17
     if (calculate_hand_value(hand, count) != 17) {
         return 0;
     }
 
-    // 2. אם היד שווה 17, נחשב את "הסכום הקשיח" (בו כל אס נחשב תמיד כ-1)
     int hard_total = 0;
     for (int i = 0; i < count; i++) {
         hard_total += (hand[i].rank_val == 14) ? 1 : (hand[i].rank_val >= 11) ? 10 : hand[i].rank_val;
     }
 
-    // 3. אם הסכום הקשיח הוא בדיוק 7 (למשל: 1 + 1 + 5 = 7), אז זה בוודאות Soft 17!
     return (hard_total == 7);
 }
 
@@ -47,7 +44,7 @@ static void play_hand(Card* hand, int* count, Card* deck, int* deck_idx, int* be
     int val = calculate_hand_value(hand, *count);
 
     while (val < 21) {
-        if (*count >= 11) { // מונע משיכת קלף 12 ומעלה שיגלוש מהמערך
+        if (*count >= 11) { 
             printf("\n" C_RED "Hand size limit reached! Forced Stand." C_RESET "\n");
             break;
         }
@@ -80,7 +77,6 @@ static void play_hand(Card* hand, int* count, Card* deck, int* deck_idx, int* be
             break;
         }
         else if (move == 3) {
-            // התיקון המאובטח שלנו למניעת איבוד כסף ב-Double Down
             int allowed_addition = *bet;
             int was_capped = 0;
 
@@ -145,7 +141,6 @@ static void resolve_bets(int p_val, int p_busted, int d_val, int bet, Player* pl
 // ==========================================
 // פונקציות המודולים החדשות (Refactored Sub-Routines)
 // ==========================================
-
 static void handle_natural_blackjack(Player* player, int bet, int d_val, Card* d_hand, int d_count) {
     printf("\n" C_GREEN "BLACKJACK!" C_RESET " You hit 21 instantly!\n");
     print_cards_ascii(d_hand, d_count, "Dealer", 0);
@@ -191,7 +186,7 @@ static int offer_and_handle_split(Player* player, int* bet1, int* bet2, Card* p_
             key = (char)_getch();
             if (key == '1' || key == '2') break;
         }
-        printf("%c\n", key); // פידבק ויזואלי של מה שנלחץ
+        printf("%c\n", key); 
 
         if (key == '1') {
             *bet2 = *bet1;
@@ -208,14 +203,13 @@ static int offer_and_handle_split(Player* player, int* bet1, int* bet2, Card* p_
     return 0;
 }
 
-// ==========================================
-// הלולאה הראשית - נקייה, קריאה ומתוזמרת
-// ==========================================
+// ===============
+// הלולאה הראשית 
+// ===============
 void play_blackjack(Player* player) {
     int is_playing = 1;
     print_blackjack_welcome();
 
-    // אנימציית כניסה
     clear_screen();
     printf("\n" C_YELLOW "==================================================" C_RESET "\n");
     printf("  " C_CYAN "[Dealer]" C_RESET " Welcome to the VIP Blackjack Table, %s!\n", player->name);
@@ -235,12 +229,12 @@ void play_blackjack(Player* player) {
             action_key = (char)_getch();
             if (action_key == '0' || action_key == '1') break;
         }
-        printf("%c\n", action_key); // פידבק ויזואלי
+        printf("%c\n", action_key); 
 
         if (action_key == '0') break;
 
         printf("Enter bet amount: $");
-        int bet1 = get_safe_int(); // כאן השארנו את הקלט הרגיל כדי לאפשר הקלדת מספרים כמו "5000"
+        int bet1 = get_safe_int();
 
         if (bet1 <= 0 || bet1 > player->balance) {
             display_error(1500, "Invalid amount or insufficient funds!");
@@ -287,12 +281,10 @@ void play_blackjack(Player* player) {
             int is_ace_split = (is_split && p_hand1[0].rank_val == 14);
 
             if (is_ace_split) {
-                // UX: מודיעים לשחקן על חוקי הבית המחמירים
                 printf("\n" C_YELLOW "--- CASINO RULE: SPLIT ACES ---" C_RESET "\n");
                 printf("You receive exactly ONE card per hand. Forced Stand.\n");
                 delay_ms(1500);
 
-                // חלוקת קלף בודד לכל יד ללא אפשרות בחירה
                 p_hand1[p1_count++] = deck[deck_idx++];
                 p_hand2[p2_count++] = deck[deck_idx++];
 
@@ -306,7 +298,6 @@ void play_blackjack(Player* player) {
                 delay_ms(2000);
             }
             else {
-                // לוגיקת המשחק הרגילה לשאר הפיצולים (שאינם אסים) או ליד רגילה
                 printf("\n--- PLAYING %s ---\n", is_split ? "HAND 1" : "HAND");
                 print_cards_ascii(p_hand1, p1_count, is_split ? "Hand 1" : player->name, 0);
                 printf("Total Value: %d\n", calculate_hand_value(p_hand1, p1_count));
@@ -344,7 +335,6 @@ void play_blackjack(Player* player) {
             printf("" C_YELLOW "  ROUND SUMMARY: You broke even ($0)." C_RESET "\n");
         }
         printf("========================================\n");
-        // ==========================================
         save_player(player); // שמירה אחת בלבד בסוף הסיבוב!
         prompt_continue(NULL);
 

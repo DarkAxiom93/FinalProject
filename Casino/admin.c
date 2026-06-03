@@ -22,32 +22,28 @@ void admin_panel(Player* p) {
     int p_idx = 0;
     char ch;
 
-    // לולאת קליטת סיסמה מוסתרת עם תמיכה במחיקה (Backspace)
+    // לולאת קליטת סיסמה מוסתרת עם תמיכה במחיקה 
     while (1) {
         ch = (char)_getch(); // קליטת תו ללא הדפסה למסך
 
-        // אם המשתמש לחץ Enter (סיום הקלדה)
         if (ch == '\r' || ch == '\n') {
-            pass[p_idx] = '\0'; // סגירת המחרוזת
+            pass[p_idx] = '\0';
             printf("\n");
             break;
         }
-        // אם המשתמש לחץ Backspace (מחיקה)
         else if (ch == '\b') {
             if (p_idx > 0) {
                 p_idx--;
-                // מחיקת הכוכבית מהמסך: חזרה אחורה, דריסה עם רווח, וחזרה אחורה שוב
                 printf("\b \b");
             }
         }
-        // כל תו רגיל אחר (כל עוד לא חרגנו מגודל המערך)
         else if (p_idx < 49) {
             pass[p_idx++] = ch;
-            printf("*"); // הדפסת הכוכבית המזויפת
+            printf("*");
         }
     }
 
-    unsigned int pass_hash = hash_password(pass); // שימוש באלגוריתם המאובטח
+    unsigned int pass_hash = hash_password(pass);
 
     unsigned int expected_hash = get_admin_hash();
 
@@ -76,11 +72,9 @@ void admin_panel(Player* p) {
             int bonus = get_safe_int();
 
             if (bonus > 0) {
-                // חסימה ראשונה: האדמין לא יכול לתת במכה אחת בונוס שגדול מנפח הארנק
                 if (bonus > MAX_BALANCE) {
                     display_error(2000, "Error: Bonus amount cannot exceed MAX_BALANCE ($%d).", MAX_BALANCE);
                 }
-                // חסימה שנייה מאובטחת: Casting ל-long long למניעת Integer Overflow בעת החיבור
                 else if ((long long)p->balance + bonus > MAX_BALANCE) {
                     printf("\n" C_YELLOW "Notice: Bonus capped at wallet limit ($%d)." C_RESET "\n", MAX_BALANCE);
                     p->balance = MAX_BALANCE;
@@ -122,7 +116,7 @@ void admin_panel(Player* p) {
                 char fname[MAX_NAME_LEN + 15];
                 snprintf(fname, sizeof(fname), "data/%s.bin", target);
 
-                FILE* f = fopen(fname, "rb"); // קריאה בינארית מהקובץ המוצפן
+                FILE* f = fopen(fname, "rb");
                 if (f) {
                     char buffer[1024] = { 0 };
                     int len = (int)fread(buffer, 1, sizeof(buffer) - 1, f);
@@ -136,19 +130,17 @@ void admin_panel(Player* p) {
                         long long audited_checksum = 0;
                         int file_version = 0;
 
-                        // 1. מנסים קודם לקרוא בפורמט החדש (כולל מספר גרסה בהתחלה ותמיכה ב-64-ביט)
                         int read_count = sscanf(buffer, "%d\n%49s\n%d\n%d\n%lld\n%lld\n%lld",
                             &file_version, audited_player.name, &audited_player.balance, &audited_player.bank_balance,
                             &audited_player.total_winnings, &audited_player.total_losses, &audited_checksum);
 
-                        // 2. אם הקריאה נכשלה (קובץ ישן שלא מתחיל במספר גרסה), ננסה את הפורמט הישן
                         if (read_count == 0) {
                             read_count = sscanf(buffer, "%49s\n%d\n%d\n%lld\n%lld\n%lld",
                                 audited_player.name, &audited_player.balance, &audited_player.bank_balance,
                                 &audited_player.total_winnings, &audited_player.total_losses, &audited_checksum);
                         }
 
-                        if (read_count >= 6) { // הצלחנו לחלץ את הנתונים בהצלחה
+                        if (read_count >= 6) { 
                             printf("\n" C_CYAN "--- SECURE DECRYPTED AUDIT REPORT: %s ---" C_RESET "\n", audited_player.name);
                             printf("  Player_Name:     %s\n", audited_player.name);
                             printf("  Current_Balance: $%d\n", audited_player.balance);

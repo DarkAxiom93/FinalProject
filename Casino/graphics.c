@@ -7,7 +7,6 @@
 // ==========================================
 // ROULETTE GRAPHICS
 // ==========================================
-// הדביקו כאן את פונקציית print_roulette_welcome במלואה
 void print_roulette_welcome() {
     clear_screen();
     printf("%s\n", C_RED);
@@ -78,10 +77,9 @@ void print_roulette_board() {
 // ==========================================
 // BLACKJACK GRAPHICS
 // ==========================================
-// הדביקו כאן את פונקציית print_blackjack_welcome במלואה
  void print_blackjack_welcome() {
     clear_screen();
-    printf("\x1b[97m"); // צבע לבן
+    printf("\x1b[97m"); 
     printf("  ______  ___      _______  _______  ___   _    ____  _______  _______  ___   _ \n");
     printf(" |  __  \\|   |    |       ||       ||   | | |  |_   ||       ||       ||   | | |\n");
     printf(" | |__| ||   |    |   _   ||       ||   |_| |    |  ||   _   ||       ||   |_| |\n");
@@ -109,7 +107,6 @@ void print_roulette_board() {
 // ==========================================
 // POKER GRAPHICS
 // ==========================================
-// הדביקו כאן את פונקציית print_poker_welcome במלואה
  void print_poker_welcome() {
      clear_screen();
      printf("" C_MAGENTA "");
@@ -139,10 +136,9 @@ void print_roulette_board() {
 // ==========================================
 // SLOTS GRAPHICS
 // ==========================================
-// הדביקו כאן את פונקציית print_slots_welcome במלואה
  void print_slots_welcome() {
      clear_screen();
-     printf("" C_YELLOW ""); // זהב
+     printf("" C_YELLOW "");
      printf("  ____  _      ___ _____  ____  \n");
      printf(" / ___|| |    / _ \\_   _|/ ___| \n");
      printf(" \\___ \\| |   | | | || |  \\___ \\ \n");
@@ -187,10 +183,9 @@ void print_roulette_board() {
 // ==========================================
 // FOOTBALL GRAPHICS
 // ==========================================
-// הדביקו כאן את פונקציית print_football_welcome במלואה
  void print_football_welcome() {
      clear_screen();
-     printf("" C_GREEN ""); // ירוק דשא
+     printf("" C_GREEN "");
      printf("  _    _    _ _____ _   _ _   _ ______ _____  \n");
      printf(" | |  | |  | |_   _| \\ | | \\ | |  ____|  __ \\ \n");
      printf(" | |  | |  | | | | |  \\| |  \\| | |__  | |__) |\n");

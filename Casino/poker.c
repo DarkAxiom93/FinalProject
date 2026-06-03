@@ -1,7 +1,4 @@
-﻿//Known:
-// //Limitation : Evaluation engine currently resolves ties based on primary hand value and ignores kicker cards(leads to slightly higher Push rate).
-
-#define _CRT_SECURE_NO_WARNINGS
+﻿#define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,7 +21,7 @@
 static int evaluate_poker_hand(Card hand[], int count) {
     int ranks[15] = { 0 };
     int suits[4] = { 0 };
-    int suit_ranks[4][15] = { 0 }; // מעקב חדש: ערכים מחולקים לפי צורה
+    int suit_ranks[4][15] = { 0 };
     int max_rank = 0;
 
     for (int i = 0; i < count; i++) {
@@ -37,16 +34,15 @@ static int evaluate_poker_hand(Card hand[], int count) {
 
         if (s_idx != -1) {
             suits[s_idx]++;
-            suit_ranks[s_idx][hand[i].rank_val]++; // תיעוד הערך בתוך הצורה הספציפית
+            suit_ranks[s_idx][hand[i].rank_val]++; 
         }
 
         if (hand[i].rank_val > max_rank) max_rank = hand[i].rank_val;
     }
 
-    // שלב חדש: חיפוש Straight Flush חוקי (5 עוקבים מאותה צורה בדיוק)
     int straight_flush_high = 0;
     for (int s = 0; s < 4; s++) {
-        if (suits[s] >= 5) { // בודקים רצף רק אם יש פלאש בצורה הזו
+        if (suits[s] >= 5) { 
             int cons = 0;
             for (int i = 14; i >= 2; i--) {
                 if (suit_ranks[s][i] > 0) {
@@ -57,7 +53,6 @@ static int evaluate_poker_hand(Card hand[], int count) {
                     cons = 0;
                 }
             }
-            // סטרייט פלאש תחתון (A-2-3-4-5) באותה הצורה
             if (suit_ranks[s][14] > 0 && suit_ranks[s][2] > 0 && suit_ranks[s][3] > 0 &&
                 suit_ranks[s][4] > 0 && suit_ranks[s][5] > 0) {
                 if (straight_flush_high == 0) straight_flush_high = 5;
@@ -97,7 +92,6 @@ static int evaluate_poker_hand(Card hand[], int count) {
         if (ranks[i] == 4) { quads++; }
     }
 
-    // עץ הדירוג המעודכן - מונע את ה-False Positive
     if (straight_flush_high > 0) return SCORE_STRAIGHT_FLUSH + straight_flush_high; // שימוש במשתנה החדש!
     if (quads > 0) return SCORE_FOUR_OF_A_KIND + max_rank;
     if (trips > 0 && pairs > 0) return SCORE_FULL_HOUSE + highest_trip;
@@ -173,16 +167,16 @@ void play_poker(Player* player) {
         community[0] = deck[d_idx++]; community[1] = deck[d_idx++]; community[2] = deck[d_idx++];
         community[3] = deck[d_idx++]; community[4] = deck[d_idx++];
 
-        // ==========================================
+        // ===========================
         // שלב 1: טרום פלופ (Pre-Flop)
-        // ==========================================
+        // ===========================
         printf("\n" C_CYAN "Dealing hole cards..." C_RESET "\n");
 
         printf(" [ Legend: " C_RED "H" C_RESET "=Hearts | " C_RED "D" C_RESET "=Diamonds | \x1b[97mC" C_RESET "=Clubs | \x1b[97mS" C_RESET "=Spades ]\n");
 
         print_cards_ascii(player_cards, 2, "Your Hand", 0);
 
-        // חישוב והצגת היד הנוכחית (טרום פלופ)
+        // חישוב והצגת היד הנוכחית 
         int current_score = evaluate_poker_hand(player_cards, 2);
         printf("Current Hand: " C_GREEN "%s" C_RESET "\n", get_hand_name(current_score));
 
@@ -212,16 +206,16 @@ void play_poker(Player* player) {
             }
         }
 
-        // ==========================================
+        // ======================
         // שלב 2: פלופ (The Flop)
-        // ==========================================
+        // ======================
         printf("\n" C_CYAN "Dealing the FLOP..." C_RESET "\n");
         delay_ms(1000);
 
         print_cards_ascii(player_cards, 2, "Your Hand", 0);
         print_cards_ascii(community, 3, "Community Cards (FLOP)", 0);
 
-        // חישוב והצגת היד בשילוב הקלפים הקהילתיים (פלופ)
+        // חישוב והצגת היד בשילוב הקלפים הקהילתיים 
         Card flop_eval[5] = { 0 };
         flop_eval[0] = player_cards[0]; flop_eval[1] = player_cards[1];
         flop_eval[2] = community[0]; flop_eval[3] = community[1]; flop_eval[4] = community[2];
@@ -254,16 +248,16 @@ void play_poker(Player* player) {
             }
         }
 
-        // ==========================================
+        // ===============================
         // שלב 3: טרן וריבר (Turn & River)
-        // ==========================================
+        // ===============================
         printf("\n" C_CYAN "Dealing Turn & River..." C_RESET "\n");
         delay_ms(1000);
 
         print_cards_ascii(player_cards, 2, "Your Hand", 0);
         print_cards_ascii(community, 5, "Final Community Cards", 0);
 
-        // חישוב והצגת היד בשילוב כל הקלפים (ריבר)
+        // חישוב והצגת היד בשילוב כל הקלפים 
         Card river_eval[7] = { 0 };
         river_eval[0] = player_cards[0]; river_eval[1] = player_cards[1];
         for (int i = 0; i < 5; i++) river_eval[i + 2] = community[i];
@@ -331,7 +325,6 @@ void play_poker(Player* player) {
             }
         }
 
-        // 3. חשיפת הדילר והשוואת ידיים - רק אם השחקן נשאר במשחק!
         if (!has_folded) {
             printf("\n" C_YELLOW "Dealer is flipping their hole cards..." C_RESET "\n");
 
@@ -344,7 +337,7 @@ void play_poker(Player* player) {
             printf("\n");
 
             print_cards_ascii(dealer_cards, 2, "Dealer Reveals Hand", 0);
-            delay_ms(1000); // נותנים לשחקן שנייה לעכל את הקלפים
+            delay_ms(1000); 
 
             Card d_eval[7] = { 0 };
             for (int i = 0; i < 5; i++) { d_eval[i] = community[i]; }
@@ -385,7 +378,6 @@ void play_poker(Player* player) {
             printf("\n" C_YELLOW "Main hand skipped because you folded pre-river." C_RESET "\n");
         }
         save_player(player);
-        // חשוב! מניעת דליפת זיכרון בסוף הסיבוב
         prompt_continue(NULL);
 
         if (player->balance <= 0) {

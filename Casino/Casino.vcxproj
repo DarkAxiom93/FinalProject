@@ -135,6 +135,7 @@
     <ClCompile Include="craps.c" />
     <ClCompile Include="football.c" />
     <ClCompile Include="graphics.c" />
+    <ClCompile Include="leaderboard.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="poker.c" />
     <ClCompile Include="roulette.c" />
@@ -150,6 +151,7 @@
     <ClInclude Include="admin.h" />
     <ClInclude Include="cards.h" />
     <ClInclude Include="graphics.h" />
+    <ClInclude Include="leaderboard.h" />
     <ClInclude Include="utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

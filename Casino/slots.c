@@ -156,7 +156,7 @@ void play_slots(Player* player) {
         }
     }
 
-    // הדפסת סיכום מושקע מהמערך הדינמי לפני היציאה
+    // הדפסת סיכום מהמערך הדינמי לפני היציאה
     if (session_history != NULL && history_count > 0) {
         clear_screen();
         printf("\n" C_CYAN "========================================" C_RESET "\n");

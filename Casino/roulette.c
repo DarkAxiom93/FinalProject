@@ -18,7 +18,6 @@
 
 int get_number_color(int number) {
     if (number == 0 || number == 37) return 0;
-    // תוקן המספר 19 במקום 28 לפי חוקי הקזינו המקוריים
     int red_numbers[] = { 1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36 };
     for (int i = 0; i < 18; i++) {
         if (number == red_numbers[i]) return 1;
@@ -92,10 +91,6 @@ static void print_active_bets(Bet active_bets[], int count) {
     printf("---------------------------\n");
 }
 
-/*
- * פונקציה לקליטת מספר רולטה כטקסט
- * מפרידה בצורה מוחלטת בין "0" ל-"00" (שמיוצג במערכת כ-37)
- */
 static int get_roulette_number() {
     clear_input_buffer();
     char input[50] = { 0 };
@@ -428,7 +423,7 @@ void play_roulette(Player* player) {
     
    
 
-    // מערך ההיסטוריה החדש (-1 מייצג שאין עדיין תוצאה)
+    // -1 מייצג שאין עדיין תוצאה
     static int history[5] = { -1, -1, -1, -1, -1 };
 
     print_roulette_welcome();
@@ -436,14 +431,13 @@ void play_roulette(Player* player) {
     while (is_playing) {
         clear_screen();
         print_table_header("ROULETTE TABLE", C_CYAN, player->balance);
-        print_spin_history(history); // קריאה להדפסת ההיסטוריה
+        print_spin_history(history); 
         print_roulette_board();
         int total_table_bet = 0;
         for (int i = 0; i < num_active_bets; i++) {
             total_table_bet += active_bets[i].amount;
         }
 
-        // תצוגת UI משודרגת
         printf("" C_YELLOW " [ Active Bets: %d/%d | Total on Table: $%d ]" C_RESET "\n",
             num_active_bets, MAX_BETS_PER_SPIN, total_table_bet);
 
@@ -534,7 +528,6 @@ void play_roulette(Player* player) {
             printf("\n");
             play_spin_sound(); // מתחיל לנגן את צליל הגלגול ברקע
             for (int spin_anim = 0; spin_anim < 25; spin_anim++) {
-                // שימוש במנוע הויזואלי בלבד להצגת הכדור המתגלגל
                 int temp_res = visual_rand() % 38;
                 printf("\r[ " C_CYAN "*" C_RESET " ] Ball rolling... %2d ", temp_res == 37 ? 00 : temp_res);
                 fflush(stdout);
@@ -542,7 +535,6 @@ void play_roulette(Player* player) {
             }
             printf("\r                                      \r");
             stop_sound(); // עוצר את צליל הגלגול
-            // התוצאה האמיתית מוגרלת מהמחולל הראשי המאובטח
             int spin_result = rand() % 38;
             int spin_color = get_number_color(spin_result);
 
@@ -570,7 +562,6 @@ void play_roulette(Player* player) {
                 }
             }
 
-            // קוד חדש:
             if (total_round_winnings > 0) {
                 play_win_sound();
                 printf(C_GREEN "WINNER!" C_RESET " You won a total of $%d in this spin!\n", total_round_winnings);

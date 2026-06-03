@@ -6,8 +6,8 @@
 #include <ctype.h>
 #include <conio.h>
 #include "utils.h"
-#include <windows.h> // הכרחי עבור מנוע הסאונד Beep
-#include <mmsystem.h> // ספריית המולטימדיה של חלונות
+#include <windows.h> 
+#include <mmsystem.h> 
 
 // פקודת קסם שמנחה את Visual Studio לקשר את ספריית האודיו אוטומטית:
 #pragma comment(lib, "winmm.lib")
@@ -30,8 +30,6 @@ int get_safe_int() {
         printf("" C_RED "Invalid input!" C_RESET " Please enter a positive numeric value: ");
     }
 
-    // אם המשתמש הכניס מספר חוקי אבל הוסיף זבל אחריו (למשל "100abc"),
-    // אנחנו לוקחים את ה-100, אבל מנקים את שאר הזבל כדי שלא יהרוס את הסיבוב הבא.
     while (getchar() != '\n');
 
     return value;
@@ -42,7 +40,6 @@ void delay_ms(int ms) {
     Sleep(ms);
 }
 
-// פונקציה חדשה לעצירת התוכנית והמתנה לאישור (פותר את הדילוג המהיר ואזהרת C6031)
 void wait_for_enter() {
     clear_input_buffer(); // ניקוי הקלדות אקראיות מזמן האנימציות
 
@@ -78,10 +75,7 @@ void print_animated_banner() {
     printf("" C_RESET "");
 }
 
-/*
- * פונקציה: print_table_header
- * תפקיד: מרכזת את כל הדפסות הכותרת בפרויקט למקום אחד (DRY Principle)
- */
+
 void print_table_header(const char* title, const char* color, int balance) {
     printf("\n========================================\n");
     printf("          %s%s" C_RESET "          \n", color, title);
@@ -117,7 +111,7 @@ int is_valid_name(const char* name) {
     for (int i = 0; name[i] != '\0'; i++) {
         // מתיר אך ורק אותיות באנגלית, מספרים, וקו תחתון
         if (!isalnum((unsigned char)name[i]) && name[i] != '_') {
-            return 0; // נמצא תו אסור (כמו סלאש או נקודה)
+            return 0; 
         }
     }
     return 1;
@@ -125,14 +119,14 @@ int is_valid_name(const char* name) {
 // מנוע חכם להצגת שגיאות באדום עם תמיכה במשתנים והשהיה אוטומטית
 void display_error(int delay_time_ms, const char* format, ...) {
     play_error_sound();
-    printf("" C_RED ""); // הפעלת צבע אדום
+    printf("" C_RED ""); 
 
     va_list args;
     va_start(args, format);
-    vprintf(format, args); // הדפסה דינמית של השגיאה והמשתנים (אם יש)
+    vprintf(format, args); 
     va_end(args);
 
-    printf("" C_RESET "\n"); // כיבוי צבע אדום וירידת שורה
+    printf("" C_RESET "\n");
 
     if (delay_time_ms > 0) {
         delay_ms(delay_time_ms);
@@ -153,7 +147,7 @@ void prompt_continue(const char* message) {
 static unsigned int casino_secret_key = 0;
 static unsigned int casino_salt_1 = 0;
 static unsigned int casino_salt_2 = 0;
-static unsigned int admin_password_hash = 0; // השדרוג לאדמין
+static unsigned int admin_password_hash = 0; 
 
 // Getters למשיכת נתונים מבוקרת (Read-Only)
 unsigned int get_secret_key() { return casino_secret_key; }
@@ -277,7 +271,6 @@ static inline unsigned long long rotl(const unsigned long long x, int k) {
 }
 
 // אתחול המנוע בעזרת אלגוריתם SplitMix64 לאנטרופיה ראשונית
-// אתחול המנוע בעזרת אלגוריתם SplitMix64 לאנטרופיה ראשונית
 void init_casino_rand(unsigned long long seed) {
     unsigned long long z = (seed += 0x9E3779B97F4A7C15ULL);
     z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
@@ -317,10 +310,6 @@ unsigned int casino_rand(void) {
 // ==========================================
 // AUDIO ENGINE IMPLEMENTATION (WAV FILES)
 // ==========================================
-
-// הערה: הדגל SND_ASYNC אומר למערכת "תנגן את הסאונד ברקע ואל תעצור את הקוד".
-// ככה הרולטה יכולה להסתובב *בזמן* שהסאונד מתנגן!
-
 void play_error_sound() {
     PlaySound(TEXT("sounds\\error.wav"), NULL, SND_FILENAME | SND_ASYNC);
 }
@@ -334,11 +323,9 @@ void play_jackpot_sound() {
 }
 
 void play_spin_sound() {
-    // מנגן את סאונד הגלגול בלולאה (SND_LOOP) עד שנגיד לו לעצור
     PlaySound(TEXT("sounds\\spin.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_LOOP);
 }
 
-// פונקציה לעצירת צליל מתגלגל (נשתמש בה ברולטה כשהיא עוצרת)
 void stop_sound() {
     PlaySound(NULL, 0, 0);
 }

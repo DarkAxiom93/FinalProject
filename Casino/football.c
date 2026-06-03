@@ -10,14 +10,14 @@
 
 #define NUM_MATCHES 3
 
-// מבנה נתונים משודרג שמייצג משחק בטופס
+// מבנה נתונים שמייצג משחק בטופס
 typedef struct {
     char home_team[30];
     char away_team[30];
     double odds_1;
     double odds_X;
     double odds_2;
-    int user_prediction;  // 1 = בית, 2 = תיקו, 3 = חוץ, 0 = דילוג (Skipped)
+    int user_prediction;  
     int actual_outcome;
 } Match;
 
@@ -39,7 +39,7 @@ static int get_match_prediction(int match_num) {
             if (choice == '1') return 1;
             if (choice == 'X' || choice == 'x') return 2;
             if (choice == '2') return 3;
-            if (choice == 'S' || choice == 's') return 0; // 0 מייצג דילוג
+            if (choice == 'S' || choice == 's') return 0; //  0 מייצג דילוג
         }
         else {
             while (getchar() != '\n');
@@ -57,7 +57,7 @@ static const char* outcome_to_str(int outcome) {
 void play_football(Player* player) {
     print_football_welcome();
 
-    int is_playing = 1; // לולאה חיצונית: שליטה על כל מודול הכדורגל
+    int is_playing = 1;
 
     while (is_playing) {
         // הקצאה דינמית לטופס המשחקים במקום מערך סטטי
