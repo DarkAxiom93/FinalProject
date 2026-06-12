@@ -121,15 +121,11 @@ void play_poker(Player* player) {
     print_poker_welcome();
 
     while (is_playing) {
+        clear_screen();
         print_table_header("ULTIMATE TEXAS HOLD'EM", "" C_MAGENTA "", player->balance);
 
-        int action;
-        while (1) {
-            printf("Options: [0] Leave Table  [1] Place Bets\nAction: ");
-            action = get_safe_int();
-            if (action == 0 || action == 1) break;
-            display_error(1500, "Invalid option. Please select 0 or 1.");
-        }
+        printf("Options: [0] Leave Table  [1] Place Bets\nAction: ");
+        int action = get_menu_key("01") - '0';
         if (action == 0) break;
 
         printf("Enter ANTE amount (BLIND will be identical): $");
@@ -182,13 +178,8 @@ void play_poker(Player* player) {
 
         printf("Current Bets -> Ante: $%d | Blind: $%d | Trips: $%d\n", ante, blind, trips);
         printf("\n" C_YELLOW "--- PRE-FLOP ACTION ---" C_RESET "\n");
-        int pre_flop_action;
-        while (1) {
-            printf("Options: [1] CHECK  [2] PLAY (3x = $%d)  [3] PLAY (4x = $%d)\nAction: ", ante * 3, ante * 4);
-            pre_flop_action = get_safe_int();
-            if (pre_flop_action >= 1 && pre_flop_action <= 3) break;
-            display_error(1500, "Invalid option. Please select 1, 2, or 3.");
-        }
+        printf("Options: [1] CHECK  [2] PLAY (3x = $%d)  [3] PLAY (4x = $%d)\nAction: ", ante * 3, ante * 4);
+        int pre_flop_action = get_menu_key("123") - '0';
         if (pre_flop_action == 2 || pre_flop_action == 3) {
             int mult = (pre_flop_action == 2) ? 3 : 4;
 
@@ -224,13 +215,8 @@ void play_poker(Player* player) {
 
         if (play_bet == 0) {
             printf("\n" C_YELLOW "--- FLOP ACTION ---" C_RESET "\n");
-            int flop_action;
-            while (1) {
-                printf("Options: [1] CHECK  [2] PLAY (2x = $%d)\nAction: ", ante * 2);
-                flop_action = get_safe_int();
-                if (flop_action == 1 || flop_action == 2) break;
-                display_error(1500, "Invalid option. Please select 1 or 2.");
-            }
+            printf("Options: [1] CHECK  [2] PLAY (2x = $%d)\nAction: ", ante * 2);
+            int flop_action = get_menu_key("12") - '0';
 
             if (flop_action == 2) {
                 if (ante * 2 > MAX_BET) {
@@ -266,13 +252,8 @@ void play_poker(Player* player) {
 
         if (play_bet == 0) {
             printf("\n" C_YELLOW "--- FINAL ACTION ---" C_RESET "\n");
-            int river_action;
-            while (1) {
-                printf("Options: [1] PLAY (1x = $%d)  [2] FOLD\nAction: ", ante);
-                river_action = get_safe_int();
-                if (river_action == 1 || river_action == 2) break;
-                display_error(1500, "Invalid option. Please select 1 or 2.");
-            }
+            printf("Options: [1] PLAY (1x = $%d)  [2] FOLD\nAction: ", ante);
+            int river_action = get_menu_key("12") - '0';
 
             if (river_action == 2) {
                 printf("" C_RED "You FOLDED. Ante ($%d) and Blind ($%d) are lost." C_RESET "\n", ante, blind);

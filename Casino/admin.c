@@ -65,7 +65,7 @@ void admin_panel(Player* p) {
         printf("0. Exit Admin Panel\n");
         printf("Select command: ");
 
-        int cmd = get_safe_int();
+        int cmd = get_menu_key("01234") - '0';
         if (cmd == 0) break;
         else if (cmd == 1) {
             printf("Enter bonus amount: $");
@@ -93,14 +93,11 @@ void admin_panel(Player* p) {
         }
         else if (cmd == 2) {
             printf("" C_RED "Are you sure you want to wipe the leaderboard? (Y/N): " C_RESET "");
-            char confirm;
-            if (scanf(" %c", &confirm) == 1) {
-                while (getchar() != '\n');
-                if (confirm == 'Y' || confirm == 'y') {
-                    FILE* file = fopen("data/highscores.txt", "w");
-                    if (file) { fclose(file); printf("" C_GREEN "Leaderboard successfully wiped." C_RESET "\n"); }
-                    delay_ms(1500);
-                }
+            char confirm = get_menu_key("YyNn");
+            if (confirm == 'Y' || confirm == 'y') {
+                FILE* file = fopen("data/highscores.txt", "w");
+                if (file) { fclose(file); printf("" C_GREEN "Leaderboard successfully wiped." C_RESET "\n"); }
+                delay_ms(1500);
             }
         }
         else if (cmd == 3) {

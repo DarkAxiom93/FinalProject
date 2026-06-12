@@ -161,7 +161,7 @@ void handle_deposit(Player* p) {
     printf("0. Return to Main Menu\n");
     printf("Choice: ");
 
-    int sub_choice = get_safe_int();
+    int sub_choice = get_menu_key("0123") - '0';
 
     if (sub_choice == 1) {
         // פעולה 1: הפקדת כסף מבחוץ לתוך הארנק 

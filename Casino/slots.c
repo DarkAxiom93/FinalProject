@@ -28,6 +28,7 @@ void play_slots(Player* player) {
     int history_count = 0;
 
     while (is_playing) {
+        clear_screen();
         print_table_header("SLOT MACHINE", "" C_YELLOW "", player->balance);
 
         if (bet == 0) {

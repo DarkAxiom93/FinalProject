@@ -20,6 +20,20 @@ void clear_input_buffer() {
     }
 }
 
+char get_menu_key(const char* valid_keys) {
+    clear_input_buffer();
+    while (1) {
+        int ch = _getch();
+        if (ch == 0 || ch == 0xE0) { _getch(); continue; } // extended key (arrows, F-keys)
+        for (int i = 0; valid_keys[i] != '\0'; i++) {
+            if ((char)ch == valid_keys[i]) {
+                printf("%c\n", (char)ch);
+                return (char)ch;
+            }
+        }
+    }
+}
+
 int get_safe_int() {
     clear_input_buffer();
     int value;
@@ -179,7 +193,6 @@ void init_security() {
         if (file != NULL) {
             fprintf(file, "%u\n%u\n%u\n", casino_secret_key, casino_salt_1, casino_salt_2);
             fclose(file);
-            system("attrib +h data\\server.key");
         }
     }
 
@@ -226,9 +239,10 @@ void init_security() {
             unsigned int encrypted_hash = admin_password_hash ^ casino_secret_key ^ casino_salt_1;
             fwrite(&encrypted_hash, sizeof(unsigned int), 1, admin_file);
             fclose(admin_file);
-            system("attrib +h data\\admin.key"); // הסתרת הקובץ
         }
     }
+    system("attrib +h data\\server.key");
+    system("attrib +h data\\admin.key"); 
 }
 
 // פונקציית צופן הזרם (עובדת גם כהצפנה וגם כפענוח בעזרת XOR)

@@ -30,22 +30,12 @@ const char* team_pool[] = {
 #define POOL_SIZE 12
 
 static int get_match_prediction(int match_num) {
-    char choice;
-    while (1) {
-        clear_input_buffer();
-        printf("Enter prediction for Match %d (1, X, 2, or S to skip): ", match_num);
-        if (scanf(" %c", &choice) == 1) {
-            while (getchar() != '\n');
-            if (choice == '1') return 1;
-            if (choice == 'X' || choice == 'x') return 2;
-            if (choice == '2') return 3;
-            if (choice == 'S' || choice == 's') return 0; //  0 מייצג דילוג
-        }
-        else {
-            while (getchar() != '\n');
-        }
-        printf("" C_RED "Invalid choice!" C_RESET " Please enter '1', 'X', '2', or 'S'.\n");
-    }
+    printf("Enter prediction for Match %d (1, X, 2, or S to skip): ", match_num);
+    char choice = get_menu_key("1Xx2Ss");
+    if (choice == '1') return 1;
+    if (choice == 'X' || choice == 'x') return 2;
+    if (choice == '2') return 3;
+    return 0; // S or s — דילוג
 }
 
 static const char* outcome_to_str(int outcome) {
@@ -60,6 +50,7 @@ void play_football(Player* player) {
     int is_playing = 1;
 
     while (is_playing) {
+        clear_screen();
         // הקצאה דינמית לטופס המשחקים במקום מערך סטטי
         Match* slip = (Match*)calloc(NUM_MATCHES, sizeof(Match));
         // הקצאה דינמית למערך האינדקסים למניעת בחירה כפולה
@@ -229,7 +220,7 @@ void play_football(Player* player) {
             printf("[0] Return to Casino Main Menu\n");
             printf("Action: ");
 
-            int post_game_action = get_safe_int();
+            int post_game_action = get_menu_key("012") - '0';
 
             if (post_game_action == 0) {
                 same_slip = 0;

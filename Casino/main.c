@@ -22,6 +22,7 @@ typedef void (*GameFunction)(Player*);
 void save_player(Player* p); 
 
 int main() {
+    ShowWindow(GetConsoleWindow(), SW_MAXIMIZE);
     SetConsoleTitleA("Ultimate Casino Simulator - VIP Edition");
     hide_cursor();
     CreateDirectory("data", NULL);
