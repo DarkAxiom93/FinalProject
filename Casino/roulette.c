@@ -328,7 +328,7 @@ static Bet place_bet() {
     return new_bet;
 }
 
-static int check_win(Bet b, int spin_result) {
+int check_win(Bet b, int spin_result) {
     int spin_color = get_number_color(spin_result);
     int is_winner = 0;
     int payout_multiplier = 0;

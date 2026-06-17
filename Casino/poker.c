@@ -18,7 +18,7 @@
 #define SCORE_TWO_PAIR        200000
 #define SCORE_ONE_PAIR        100000
 
-static int evaluate_poker_hand(Card hand[], int count) {
+int evaluate_poker_hand(Card hand[], int count) {
     int ranks[15] = { 0 };
     int suits[4] = { 0 };
     int suit_ranks[4][15] = { 0 };

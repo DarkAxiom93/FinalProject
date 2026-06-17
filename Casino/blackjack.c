@@ -13,7 +13,7 @@
 // ==========================================
 // פונקציות עזר - לוגיקת קלפים
 // ==========================================
-static int calculate_hand_value(Card* hand, int count) {
+int calculate_hand_value(Card* hand, int count) {
     int total = 0, aces = 0;
     for (int i = 0; i < count; i++) {
         if (hand[i].rank_val == 14) { total += 11; aces++; }
@@ -24,7 +24,7 @@ static int calculate_hand_value(Card* hand, int count) {
     return total;
 }
 
-static int is_soft_17(Card* hand, int count) {
+int is_soft_17(Card* hand, int count) {
     if (calculate_hand_value(hand, count) != 17) {
         return 0;
     }

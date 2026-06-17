@@ -24,9 +24,10 @@ void print_roulette_welcome() {
     printf(C_CYAN "=========================================================================" C_RESET "\n");
     printf(" * Straight Up (1 Number)  : Pays 35 to 1\n");
     printf(" * Split (2 Numbers)       : Pays 17 to 1\n");
-    printf(" * Street (3 Numbers)      : Pays 11 to 1\n");
-    printf(" * Dozens (12 Numbers)     : Pays 2 to 1\n");
-    printf(" * Color / Even / Odd      : Pays 1 to 1\n");
+    printf(" * Corner (4 Numbers)      : Pays  8 to 1\n");
+    printf(" * Dozens (12 Numbers)     : Pays  2 to 1\n");
+    printf(" * Color / Even / Odd      : Pays  1 to 1\n");
+    printf(" * Halves (1-18 / 19-36)   : Pays  1 to 1\n");
     printf(C_CYAN "=========================================================================" C_RESET "\n\n");
 
     printf(C_GREEN "Press ENTER to acknowledge rules and join the table..." C_RESET "");
