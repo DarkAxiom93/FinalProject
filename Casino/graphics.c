@@ -160,16 +160,38 @@ void print_roulette_board() {
      wait_for_enter();
      clear_screen();
  }
- // פונקציה שמציירת את המכונה עם האנימציה
-  void draw_slot_machine(int s1, int s2, int s3) {
+ // מציירת את החלק העליון של המסגרת, עד השורה שמעליה יסתובבו הגלגלים
+ void draw_slot_machine_top() {
      printf("\n");
      printf("   .-----------------------.\n");
-     printf("   |  " C_YELLOW "C A S I N O   S L O T" C_RESET "  |\n");
+     printf("   | " C_YELLOW "C A S I N O   S L O T" C_RESET " |\n");
      printf("   |-----------------------|\n");
      printf("   |                       |\n");
-     printf("   |   %s %s %s  |\n", slot_symbols[s1], slot_symbols[s2], slot_symbols[s3]);
+ }
+
+ // מציירת/מרעננת את שורת הגלגלים בתוך המסגרת (משמשת גם לאנימציית הסיבוב וגם לתוצאה הסופית)
+ void draw_slot_machine_row(int s1, int s2, int s3) {
+     printf("\r   |   %s %s %s   |", slot_symbols[s1], slot_symbols[s2], slot_symbols[s3]);
+     fflush(stdout);
+ }
+
+ // מציירת את החלק התחתון של המסגרת, אחרי שורת הגלגלים
+ void draw_slot_machine_bottom() {
+     printf("\n");
      printf("   |                       |\n");
      printf("   '-----------------------'\n");
+ }
+
+ // מזיז את הסמן בחזרה לשורת הגלגלים, כדי לאפשר אנימציה כשהמסגרת כולה (כולל התחתית) כבר מצוירת
+ void draw_slot_machine_cursor_to_row() {
+     printf("\x1b[3A");
+     fflush(stdout);
+ }
+
+ // מזיז את הסמן מתחת למסגרת בסיום עדכון שורת הגלגלים
+ void draw_slot_machine_cursor_below() {
+     printf("\x1b[3B\r");
+     fflush(stdout);
  }
 
  // מערך של סמלים למכונת המזל

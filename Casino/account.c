@@ -8,68 +8,97 @@
 
 
 // חתימת אבטחה ב-64-ביט המונעת חיתוך נתונים והתנגשויות
+// הערה: כאשר is_banned == 0 הנוסחה מתכנסת בדיוק לנוסחה הישנה (XOR עם 0 לא משנה כלום),
+// כך שקבצי שמירה מהדור הקודם (v2, בלי שדה is_banned) ממשיכים להיות תקפים.
 static long long calculate_checksum(Player* p) {
     return (((long long)p->balance * get_salt_1()) ^ ((long long)p->bank_balance * get_salt_2())) +
-        (((long long)p->total_winnings * 5039LL) ^ (long long)p->total_losses) ^ get_secret_key();
+        (((long long)p->total_winnings * 5039LL) ^ (long long)p->total_losses) ^ get_secret_key() ^
+        ((long long)p->is_banned * 104729LL);
+}
+
+// קורא ומפענח את data/<name>.bin. הפענוח עצמו תמיד "מצליח" (XOR), אז מסתמכים על
+// בדיקת הגרסה כדי לבחור את תבנית ה-sscanf הנכונה, ולא על ניחוש לפי מספר השדות שנקלטו.
+int read_player_file(const char* name, Player* out, int* out_checksum_ok, int* out_file_version) {
+    memset(out, 0, sizeof(Player));
+    strncpy(out->name, name, MAX_NAME_LEN - 1);
+    if (out_checksum_ok) *out_checksum_ok = 0;
+    if (out_file_version) *out_file_version = 0;
+
+    char filename[MAX_NAME_LEN + 15];
+    snprintf(filename, sizeof(filename), "data/%s.bin", name);
+    FILE* file = fopen(filename, "rb");
+    if (file == NULL) return 0;
+
+    char buffer[1024] = { 0 };
+    int len = (int)fread(buffer, 1, sizeof(buffer) - 1, file);
+    fclose(file);
+    if (len <= 0) return -1;
+
+    crypt_buffer(buffer, len);
+    buffer[len] = '\0';
+
+    int file_version = 0;
+    sscanf(buffer, "%d", &file_version);
+    if (out_file_version) *out_file_version = file_version;
+
+    long long loaded_checksum = 0;
+    int read_count;
+
+    if (file_version >= 3) {
+        read_count = sscanf(buffer, "%d\n%49s\n%d\n%d\n%lld\n%lld\n%d\n%lld",
+            &file_version, out->name, &out->balance, &out->bank_balance,
+            &out->total_winnings, &out->total_losses, &out->is_banned, &loaded_checksum);
+        if (read_count < 8) return -1;
+    }
+    else {
+        out->is_banned = 0;
+        read_count = sscanf(buffer, "%d\n%49s\n%d\n%d\n%lld\n%lld\n%lld",
+            &file_version, out->name, &out->balance, &out->bank_balance,
+            &out->total_winnings, &out->total_losses, &loaded_checksum);
+        if (read_count < 7) return -1;
+    }
+
+    if (out_checksum_ok) *out_checksum_ok = (loaded_checksum == calculate_checksum(out));
+    return 1;
 }
 
 void load_player(Player* p) {
     char temp_name[MAX_NAME_LEN];
     strcpy(temp_name, p->name);
-    memset(p, 0, sizeof(Player));
-    strcpy(p->name, temp_name);
-    p->balance = 1000; p->bank_balance = 0; p->total_winnings = 0; p->total_losses = 0;
-    char filename[MAX_NAME_LEN + 15];
-    snprintf(filename, sizeof(filename), "data/%s.bin", p->name);
-    FILE* file = fopen(filename, "rb");
 
-    if (file != NULL) {
-        char buffer[1024] = { 0 };
-        int len = (int)fread(buffer, 1, sizeof(buffer) - 1, file);
-        fclose(file);
+    int checksum_ok = 0;
+    int file_version = 0;
+    int status = read_player_file(temp_name, p, &checksum_ok, &file_version);
 
-        if (len > 0) {
-            crypt_buffer(buffer, len);
-            buffer[len] = '\0';
-            long long loaded_checksum = 0;
-            int file_version = 0; 
-
-            int read_count = sscanf(buffer, "%d\n%49s\n%d\n%d\n%lld\n%lld\n%lld",
-                &file_version, p->name, &p->balance, &p->bank_balance,
-                &p->total_winnings, &p->total_losses, &loaded_checksum);
-
-            if (read_count >= 6) { 
-                if (file_version < SAVE_FILE_VERSION) {
-                    printf(C_YELLOW "Detected legacy save file! Upgrading to v%d..." C_RESET "\n", SAVE_FILE_VERSION);
-                    // כאן אפשר להוסיף לוגיקה להשלמת נתונים חסרים אם נרצה בעתיד
-                }
-                long long expected_checksum = calculate_checksum(p);
-                if (loaded_checksum != expected_checksum) {
-                    clear_screen();
-                    printf("" C_RED "\n======================================================\n");
-                    printf("  ! ! ! ANTI-CHEAT SYSTEM TRIGGERED ! ! !  \n");
-                    printf("======================================================\n" C_RESET "");
-                    printf("Data tampering detected in your save file!\n");
-                    printf("Your account has been reset as a penalty.\n");
-                    memset(p, 0, sizeof(Player));
-                    strcpy(p->name, temp_name);
-                    save_player(p);
-                    delay_ms(5000);
-                }
-                else {
-                    printf("\n" C_GREEN "Welcome back, %s! Your profile was securely loaded and decrypted." C_RESET "\n", p->name);
-                }
-            }
-            else {
-                printf("\n" C_RED "SYSTEM ERROR: Save file is corrupted! Resetting account." C_RESET "\n");
-                memset(p, 0, sizeof(Player));
-                strcpy(p->name, temp_name);
-                save_player(p);
-                delay_ms(3000);
-            }
+    if (status == 1 && checksum_ok) {
+        if (file_version < SAVE_FILE_VERSION) {
+            printf(C_YELLOW "Detected legacy save file! Upgrading to v%d..." C_RESET "\n", SAVE_FILE_VERSION);
         }
+        printf("\n" C_GREEN "Welcome back, %s! Your profile was securely loaded and decrypted." C_RESET "\n", p->name);
+    }
+    else if (status == 1 && !checksum_ok) {
+        clear_screen();
+        printf("" C_RED "\n======================================================\n");
+        printf("  ! ! ! ANTI-CHEAT SYSTEM TRIGGERED ! ! !  \n");
+        printf("======================================================\n" C_RESET "");
+        printf("Data tampering detected in your save file!\n");
+        printf("Your account has been reset as a penalty.\n");
+        memset(p, 0, sizeof(Player));
+        strcpy(p->name, temp_name);
+        save_player(p);
+        delay_ms(5000);
+    }
+    else if (status == -1) {
+        printf("\n" C_RED "SYSTEM ERROR: Save file is corrupted! Resetting account." C_RESET "\n");
+        memset(p, 0, sizeof(Player));
+        strcpy(p->name, temp_name);
+        save_player(p);
+        delay_ms(3000);
     }
     else {
+        memset(p, 0, sizeof(Player));
+        strcpy(p->name, temp_name);
+        p->balance = 1000;
         printf("\n" C_CYAN "New account created for %s. Starting balance: $1000." C_RESET "\n", p->name);
         save_player(p);
     }
@@ -86,9 +115,9 @@ void save_player(Player* p) {
         long long checksum = calculate_checksum(p);
         char buffer[1024] = { 0 };
 
-        int len = snprintf(buffer, sizeof(buffer), "%d\n%s\n%d\n%d\n%lld\n%lld\n%lld\n",
+        int len = snprintf(buffer, sizeof(buffer), "%d\n%s\n%d\n%d\n%lld\n%lld\n%d\n%lld\n",
             SAVE_FILE_VERSION, p->name, p->balance, p->bank_balance,
-            p->total_winnings, p->total_losses, checksum);
+            p->total_winnings, p->total_losses, p->is_banned, checksum);
         crypt_buffer(buffer, len);
         fwrite(buffer, 1, len, file);
         fclose(file);

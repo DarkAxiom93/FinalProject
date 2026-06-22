@@ -9,20 +9,38 @@
 #include "cards.h"
 #include "account.h"
 
-#define SCORE_STRAIGHT_FLUSH  800000
-#define SCORE_FOUR_OF_A_KIND  700000
-#define SCORE_FULL_HOUSE      600000
-#define SCORE_FLUSH           500000
-#define SCORE_STRAIGHT        400000
-#define SCORE_THREE_OF_A_KIND 300000
-#define SCORE_TWO_PAIR        200000
-#define SCORE_ONE_PAIR        100000
+#define RANK_BASE     15
+#define CATEGORY_UNIT 759375 /* RANK_BASE^5: tiebreak space reserved per category */
+
+#define SCORE_HIGH_CARD       (0 * CATEGORY_UNIT)
+#define SCORE_ONE_PAIR        (1 * CATEGORY_UNIT)
+#define SCORE_TWO_PAIR        (2 * CATEGORY_UNIT)
+#define SCORE_THREE_OF_A_KIND (3 * CATEGORY_UNIT)
+#define SCORE_STRAIGHT        (4 * CATEGORY_UNIT)
+#define SCORE_FLUSH           (5 * CATEGORY_UNIT)
+#define SCORE_FULL_HOUSE      (6 * CATEGORY_UNIT)
+#define SCORE_FOUR_OF_A_KIND  (7 * CATEGORY_UNIT)
+#define SCORE_STRAIGHT_FLUSH  (8 * CATEGORY_UNIT)
+
+/* Packs up to 5 ranks (highest priority first) into one tiebreak number,
+   so two hands of the same category compare correctly card-by-card, not just by one rank. */
+static int pack_ranks(int r0, int r1, int r2, int r3, int r4) {
+    return ((((r0 * RANK_BASE) + r1) * RANK_BASE + r2) * RANK_BASE + r3) * RANK_BASE + r4;
+}
+
+/* Highest `n` ranks present in ranks[2..14], skipping exclude_a/exclude_b. Missing slots are 0. */
+static void top_ranks(const int ranks[15], int exclude_a, int exclude_b, int n, int out[]) {
+    int idx = 0;
+    for (int i = 14; i >= 2 && idx < n; i--) {
+        if (ranks[i] > 0 && i != exclude_a && i != exclude_b) out[idx++] = i;
+    }
+    while (idx < n) out[idx++] = 0;
+}
 
 int evaluate_poker_hand(Card hand[], int count) {
     int ranks[15] = { 0 };
     int suits[4] = { 0 };
     int suit_ranks[4][15] = { 0 };
-    int max_rank = 0;
 
     for (int i = 0; i < count; i++) {
         ranks[hand[i].rank_val]++;
@@ -34,15 +52,13 @@ int evaluate_poker_hand(Card hand[], int count) {
 
         if (s_idx != -1) {
             suits[s_idx]++;
-            suit_ranks[s_idx][hand[i].rank_val]++; 
+            suit_ranks[s_idx][hand[i].rank_val]++;
         }
-
-        if (hand[i].rank_val > max_rank) max_rank = hand[i].rank_val;
     }
 
     int straight_flush_high = 0;
     for (int s = 0; s < 4; s++) {
-        if (suits[s] >= 5) { 
+        if (suits[s] >= 5) {
             int cons = 0;
             for (int i = 14; i >= 2; i--) {
                 if (suit_ranks[s][i] > 0) {
@@ -59,14 +75,47 @@ int evaluate_poker_hand(Card hand[], int count) {
             }
         }
     }
+    if (straight_flush_high > 0) return SCORE_STRAIGHT_FLUSH + pack_ranks(straight_flush_high, 0, 0, 0, 0);
 
-    // חישוב Flush רגיל
-    int is_flush = 0;
-    for (int i = 0; i < 4; i++) {
-        if (suits[i] >= 5) is_flush = 1;
+    // רביעיה: דרגת הרביעיה עצמה + קלף קיקר אחד
+    int quad_rank = 0;
+    for (int i = 14; i >= 2; i--) {
+        if (ranks[i] == 4) { quad_rank = i; break; }
+    }
+    if (quad_rank > 0) {
+        int kicker[1];
+        top_ranks(ranks, quad_rank, -1, 1, kicker);
+        return SCORE_FOUR_OF_A_KIND + pack_ranks(quad_rank, kicker[0], 0, 0, 0);
     }
 
-    // חישוב Straight רגיל
+    // השלשה הגבוהה ביותר, וה"זוג" הגבוה ביותר מדרגה אחרת
+    // (יכול להיות שארית של שלשה שנייה, למשל 7-7-7 + K-K-K => פול האוס מלכים מלא בשבעות)
+    int trip_rank = 0;
+    for (int i = 14; i >= 2; i--) {
+        if (ranks[i] >= 3) { trip_rank = i; break; }
+    }
+    int pair_rank = 0;
+    if (trip_rank > 0) {
+        for (int i = 14; i >= 2; i--) {
+            if (i != trip_rank && ranks[i] >= 2) { pair_rank = i; break; }
+        }
+    }
+    if (trip_rank > 0 && pair_rank > 0) {
+        return SCORE_FULL_HOUSE + pack_ranks(trip_rank, pair_rank, 0, 0, 0);
+    }
+
+    // פלאש: חמשת הקלפים הגבוהים מתוך צבע הפלאש בלבד (לא מהיד כולה)
+    int flush_suit = -1;
+    for (int s = 0; s < 4; s++) {
+        if (suits[s] >= 5) { flush_suit = s; break; }
+    }
+    if (flush_suit != -1) {
+        int top5[5];
+        top_ranks(suit_ranks[flush_suit], -1, -1, 5, top5);
+        return SCORE_FLUSH + pack_ranks(top5[0], top5[1], top5[2], top5[3], top5[4]);
+    }
+
+    // סטרייט רגיל
     int straight_high = 0;
     int cons = 0;
     for (int i = 14; i >= 2; i--) {
@@ -81,27 +130,35 @@ int evaluate_poker_hand(Card hand[], int count) {
     if (ranks[14] > 0 && ranks[2] > 0 && ranks[3] > 0 && ranks[4] > 0 && ranks[5] > 0) {
         if (straight_high == 0) straight_high = 5;
     }
+    if (straight_high > 0) return SCORE_STRAIGHT + pack_ranks(straight_high, 0, 0, 0, 0);
 
-    // חישוב זוגות ושלשות
-    int pairs = 0, trips = 0, quads = 0;
-    int highest_pair = 0, highest_trip = 0;
-
-    for (int i = 2; i <= 14; i++) {
-        if (ranks[i] == 2) { pairs++; if (i > highest_pair) highest_pair = i; }
-        if (ranks[i] == 3) { trips++; if (i > highest_trip) highest_trip = i; }
-        if (ranks[i] == 4) { quads++; }
+    if (trip_rank > 0) {
+        int kickers[2];
+        top_ranks(ranks, trip_rank, -1, 2, kickers);
+        return SCORE_THREE_OF_A_KIND + pack_ranks(trip_rank, kickers[0], kickers[1], 0, 0);
     }
 
-    if (straight_flush_high > 0) return SCORE_STRAIGHT_FLUSH + straight_flush_high; // שימוש במשתנה החדש!
-    if (quads > 0) return SCORE_FOUR_OF_A_KIND + max_rank;
-    if (trips > 0 && pairs > 0) return SCORE_FULL_HOUSE + highest_trip;
-    if (is_flush) return SCORE_FLUSH + max_rank;
-    if (straight_high > 0) return SCORE_STRAIGHT + straight_high;
-    if (trips > 0) return SCORE_THREE_OF_A_KIND + highest_trip;
-    if (pairs >= 2) return SCORE_TWO_PAIR + highest_pair;
-    if (pairs == 1) return SCORE_ONE_PAIR + highest_pair;
+    int pair1 = 0, pair2 = 0;
+    for (int i = 14; i >= 2 && pair2 == 0; i--) {
+        if (ranks[i] == 2) {
+            if (pair1 == 0) pair1 = i;
+            else pair2 = i;
+        }
+    }
+    if (pair1 > 0 && pair2 > 0) {
+        int kicker[1];
+        top_ranks(ranks, pair1, pair2, 1, kicker);
+        return SCORE_TWO_PAIR + pack_ranks(pair1, pair2, kicker[0], 0, 0);
+    }
+    if (pair1 > 0) {
+        int kickers[3];
+        top_ranks(ranks, pair1, -1, 3, kickers);
+        return SCORE_ONE_PAIR + pack_ranks(pair1, kickers[0], kickers[1], kickers[2], 0);
+    }
 
-    return max_rank;
+    int top5[5];
+    top_ranks(ranks, -1, -1, 5, top5);
+    return SCORE_HIGH_CARD + pack_ranks(top5[0], top5[1], top5[2], top5[3], top5[4]);
 }
 
 static const char* get_hand_name(int score) {
@@ -332,11 +389,11 @@ void play_poker(Player* player) {
                 int total_win = (ante * 2) + (play_bet * 2);
                 int blind_win = blind;
 
-                if (p_score >= 400000) {
-                    if (p_score >= 800000) blind_win += blind * 50;
-                    else if (p_score >= 700000) blind_win += blind * 10;
-                    else if (p_score >= 600000) blind_win += blind * 3;
-                    else if (p_score >= 500000) blind_win += blind * 1;
+                if (p_score >= SCORE_STRAIGHT) {
+                    if (p_score >= SCORE_STRAIGHT_FLUSH) blind_win += blind * 50;
+                    else if (p_score >= SCORE_FOUR_OF_A_KIND) blind_win += blind * 10;
+                    else if (p_score >= SCORE_FULL_HOUSE) blind_win += blind * 3;
+                    else if (p_score >= SCORE_FLUSH) blind_win += blind * 1;
                     else blind_win += blind * 1;
                 }
 

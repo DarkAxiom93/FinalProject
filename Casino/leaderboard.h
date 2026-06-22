@@ -12,7 +12,6 @@ typedef struct {
 } Highscore;
 
 // הצהרת הפונקציות כדי ש-main יוכל להשתמש בהן
-void update_leaderboard(Player* p);
 void display_leaderboard();
 
 #endif // LEADERBOARD_H

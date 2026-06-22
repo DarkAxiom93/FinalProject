@@ -72,21 +72,26 @@ void play_slots(Player* player) {
             break;
         }
 
+        // מציירים את כל המסגרת (כולל התחתית) מראש, ואז זזים חזרה לשורת הגלגלים כדי שהאנימציה תתבצע בתוכה
+        draw_slot_machine_top();
+        draw_slot_machine_row(visual_rand() % 5, visual_rand() % 5, visual_rand() % 5);
+        draw_slot_machine_bottom();
+        draw_slot_machine_cursor_to_row();
+
         for (int i = 0; i < 15; i++) {
             int v1 = visual_rand() % 5;
             int v2 = visual_rand() % 5;
             int v3 = visual_rand() % 5;
-            printf("\r   [ %s %s %s ]   ", slot_symbols[v1], slot_symbols[v2], slot_symbols[v3]);
-            fflush(stdout);
+            draw_slot_machine_row(v1, v2, v3);
             delay_ms(80 + (i * 10));
         }
-        printf("\n");
 
         reels[0] = rand() % 5;
         reels[1] = rand() % 5;
         reels[2] = rand() % 5;
 
-        draw_slot_machine(reels[0], reels[1], reels[2]);
+        draw_slot_machine_row(reels[0], reels[1], reels[2]);
+        draw_slot_machine_cursor_below();
 
         int payout = 0;
         if (reels[0] == 0 && reels[1] == 0 && reels[2] == 0) {

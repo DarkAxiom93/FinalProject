@@ -8,15 +8,16 @@
 // אם סכום זה יוגדל אי פעם מעבר ל-2.14 מיליארד (INT_MAX), 
 // חובה לשנות את bank_balance במבנה Player ל-long long ולעדכן את כל ההדפסות!
 #define MAX_BANK_BALANCE 500000
-#define SAVE_FILE_VERSION 2  // הגרסה הנוכחית של פורמט השמירה
+#define SAVE_FILE_VERSION 3  // הגרסה הנוכחית של פורמט השמירה (v3 מוסיף is_banned)
 
-// מבנה נתונים 1: ניהול שחקן 
+// מבנה נתונים 1: ניהול שחקן
 typedef struct {
     char name[MAX_NAME_LEN];
     int balance;         // יתרה נוכחית של השחקן
     int bank_balance;
-    long long total_winnings;  // מעקב אחרי זכיות 
+    long long total_winnings;  // מעקב אחרי זכיות
     long long total_losses;    // מעקב אחרי הפסדים
+    int is_banned;        // 1 = החשבון חסום על ידי האדמין
 } Player;
 
 // מבנה נתונים 2: ניהול הימור מעודכן 

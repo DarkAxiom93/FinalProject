@@ -130,8 +130,19 @@ int main() {
     select_player_profile(current_player.name);
 
     load_player(&current_player);
+
+    if (current_player.is_banned) {
+        clear_screen();
+        printf("" C_RED "\n========================================\n");
+        printf("           ACCOUNT BANNED          \n");
+        printf("========================================" C_RESET "\n");
+        printf("This account has been banned by casino management.\n");
+        printf("Contact casino support if you believe this is a mistake.\n");
+        delay_ms(3000);
+        return 0;
+    }
+
     session_start_balance = current_player.balance;
-    update_leaderboard(&current_player); 
     delay_ms(1500);
 
     GameFunction casino_games[] = {
@@ -179,7 +190,6 @@ int main() {
 
             if (current_player.balance <= 0) {
                 printf("\n" C_RED "GAME OVER: You are bankrupt and chose not to fund your wallet!" C_RESET "\n");
-                update_leaderboard(&current_player);
                 save_player(&current_player);
                 break;
             }
@@ -218,7 +228,6 @@ int main() {
             else printf(" Session Net      : $0 (Broke Even)\n");
             printf(" Lifetime Wins    : $%lld\n Lifetime Losses  : $%lld\n========================================\n" C_YELLOW " Thank you for playing! See you next time." C_RESET "\n", current_player.total_winnings, current_player.total_losses);
 
-            update_leaderboard(&current_player); 
             save_player(&current_player);
             delay_ms(3000);
             return 0;

@@ -1,95 +1,62 @@
-﻿#define _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <windows.h>
 #include "casino.h"
 #include "utils.h"
+#include "account.h"
 #include "leaderboard.h"
 
-// מאקרו לחישוב חתימת אבטחה לטבלת המובילים (מועבר לכאן מ-main.c)
-#define HIGHSCORE_SIG(name, score) \
-    (secure_hash(name) ^ (unsigned int)((score) & 0xFFFFFFFF) ^ (unsigned int)((score) >> 32))
-
-void update_leaderboard(Player* p) {
-    Highscore scores[MAX_SCORES + 1] = { 0 };
-    int count = 0;
-
-    FILE* file = fopen("data/highscores.txt", "r");
-    if (file != NULL) {
-        unsigned int file_hash;
-        while (count < MAX_SCORES && fscanf(file, "%49s %lld %u", scores[count].name, &scores[count].score, &file_hash) == 3) {
-            // Anti-Cheat: הוספת השורה למערך רק אם החתימה מאומתת
-            if (file_hash == HIGHSCORE_SIG(scores[count].name, scores[count].score)) {
-                count++;
-            }
-        }
-        fclose(file);
-    }
-
-    int found = 0;
-    for (int i = 0; i < count; i++) {
-        if (strcmp(scores[i].name, p->name) == 0) {
-            if (p->total_winnings > scores[i].score) {
-                scores[i].score = p->total_winnings;
-            }
-            found = 1; break;
-        }
-    }
-    if (!found) {
-        strcpy(scores[count].name, p->name);
-        scores[count].score = p->total_winnings;
-        count++;
-    }
-
-    // מיון הטבלה מהגבוה לנמוך
-    for (int i = 0; i < count - 1; i++) {
-        for (int j = 0; j < count - i - 1; j++) {
-            if (scores[j].score < scores[j + 1].score) {
-                Highscore temp = scores[j];
-                scores[j] = scores[j + 1];
-                scores[j + 1] = temp;
-            }
-        }
-    }
-
-    int limit = (count > MAX_SCORES) ? MAX_SCORES : count;
-
-    file = fopen("data/highscores.txt", "w");
-    if (file != NULL) {
-        for (int i = 0; i < limit; i++) {
-            unsigned int signature = HIGHSCORE_SIG(scores[i].name, scores[i].score);
-            fprintf(file, "%s %lld %u\n", scores[i].name, scores[i].score, signature);
-        }
-        fclose(file);
-    }
-}
-
+// טבלת המובילים נקראת בכל פעם ישירות מקבצי השחקנים (data/*.bin) - אין קובץ ביניים
+// שיכול להתיישן, כך שהדירוג תמיד משקף את total_winnings האמיתי והעדכני של כל שחקן.
 void display_leaderboard() {
     clear_screen();
     printf("" C_YELLOW "==================================================\n");
     printf("           C A S I N O   H A L L   O F   F A M E  \n");
     printf("==================================================\n" C_RESET "");
 
-    FILE* file = fopen("data/highscores.txt", "r");
-    if (file != NULL) {
-        char name[MAX_NAME_LEN];
-        long long score;
-        unsigned int file_hash;
-        int rank = 1;
+    Highscore top[MAX_SCORES] = { 0 };
+    int top_count = 0;
 
-        printf("\n  RANK  |  PLAYER NAME          |  TOTAL WINNINGS \n--------------------------------------------------\n");
-        while (fscanf(file, "%49s %lld %u", name, &score, &file_hash) == 3 && rank <= MAX_SCORES) {
-            // מציג רק שורות שלא עברו השחתה
-            if (file_hash == HIGHSCORE_SIG(name, score)) {
-                printf("  #%d    |  %-20s |  $%lld\n", rank, name, score);
-                rank++;
+    WIN32_FIND_DATAA fd;
+    HANDLE hFind = FindFirstFileA("data\\*.bin", &fd);
+    if (hFind != INVALID_HANDLE_VALUE) {
+        do {
+            char name[MAX_NAME_LEN] = { 0 };
+            strncpy(name, fd.cFileName, MAX_NAME_LEN - 1);
+            char* dot = strrchr(name, '.');
+            if (dot) *dot = '\0';
+            if (!is_valid_name(name)) continue;
+
+            Player pl = { 0 };
+            if (read_player_file(name, &pl, NULL, NULL) != 1) continue;
+
+            // מאתרים את מקום ההכנסה הנכון בטבלת ה-Top, ושומרים אותה ממוינת מהגבוה לנמוך
+            int insert_at = top_count;
+            for (int i = 0; i < top_count; i++) {
+                if (pl.total_winnings > top[i].score) { insert_at = i; break; }
             }
-        }
-        fclose(file);
-        if (rank == 1) printf("\n  No records found or file tampered. Play to be the first!\n");
+            if (insert_at >= MAX_SCORES) continue; // לא מספיק גבוה כדי להיכנס לטבלה
+
+            int last = (top_count < MAX_SCORES) ? top_count : MAX_SCORES - 1;
+            for (int j = last; j > insert_at; j--) top[j] = top[j - 1];
+
+            strcpy(top[insert_at].name, pl.name);
+            top[insert_at].score = pl.total_winnings;
+            if (top_count < MAX_SCORES) top_count++;
+        } while (FindNextFileA(hFind, &fd));
+        FindClose(hFind);
+    }
+
+    if (top_count == 0) {
+        printf("\n  No records yet. Play a game and be the first!\n");
     }
     else {
-        printf("\n  No records yet. Play a game and be the first!\n");
+        printf("\n  RANK  |  PLAYER NAME          |  TOTAL WINNINGS \n--------------------------------------------------\n");
+        for (int i = 0; i < top_count; i++) {
+            printf("  #%d    |  %-20s |  $%lld\n", i + 1, top[i].name, top[i].score);
+        }
     }
 
     prompt_continue("Press ENTER to return to the main menu...");

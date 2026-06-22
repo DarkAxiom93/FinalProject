@@ -15,10 +15,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <windows.h>
 
 #include "casino.h"
 #include "cards.h"
 #include "account.h"
+#include "utils.h"
 #include "test_api.h"
 
 /* =====================================================================
@@ -231,6 +233,176 @@ static void test_poker_hand_ranking(void) {
     }
 }
 
+/* =====================================================================
+ * 4b. evaluate_poker_hand — same-category tiebreaks (poker.c)
+ * ===================================================================== */
+static void test_poker_hand_comparisons(void) {
+    printf("\n=== evaluate_poker_hand: same-category tiebreaks ===\n");
+
+    /* Four of a Kind: the quad's own rank must outrank a higher kicker elsewhere */
+    {
+        Card quad_sevens_ace_kicker[7] = {
+            mk(7,'H'), mk(7,'D'), mk(7,'C'), mk(7,'S'),
+            mk(14,'H'), mk(2,'D'), mk(3,'C')
+        };
+        Card quad_kings_low_kicker[7] = {
+            mk(13,'H'), mk(13,'D'), mk(13,'C'), mk(13,'S'),
+            mk(5,'H'), mk(4,'D'), mk(2,'C')
+        };
+        int s1 = evaluate_poker_hand(quad_sevens_ace_kicker, 7);
+        int s2 = evaluate_poker_hand(quad_kings_low_kicker, 7);
+        CHECK(s2 > s1, "Quad Kings beats Quad 7s even with an Ace kicker on the 7s");
+    }
+
+    /* Full House: two trips in 7 cards must be recognized as a Full House, not Three of a Kind */
+    {
+        Card double_trips[7] = {
+            mk(7,'H'), mk(7,'D'), mk(7,'C'),
+            mk(13,'H'), mk(13,'D'), mk(13,'C'),
+            mk(2,'S')
+        };
+        int s = evaluate_poker_hand(double_trips, 7);
+        CHECK(s >= T_FULL_HOUSE && s < T_FOUR_OF_A_KIND, "Trip 7s + Trip Ks ranks as FULL_HOUSE (Ks full of 7s)");
+    }
+
+    /* Full House: same trip rank, higher pair rank must win (not tie) */
+    {
+        Card sevens_full_of_kings[5] = {
+            mk(7,'H'), mk(7,'D'), mk(7,'C'), mk(13,'H'), mk(13,'D')
+        };
+        Card sevens_full_of_queens[5] = {
+            mk(7,'S'), mk(7,'C'), mk(7,'D'), mk(12,'H'), mk(12,'D')
+        };
+        int s1 = evaluate_poker_hand(sevens_full_of_kings, 5);
+        int s2 = evaluate_poker_hand(sevens_full_of_queens, 5);
+        CHECK(s1 > s2, "Sevens full of Kings beats Sevens full of Queens");
+    }
+
+    /* Flush: high card outside the flush suit must not inflate the flush's tiebreak */
+    {
+        Card flush_to_jack_with_offsuit_ace[7] = {
+            mk(2,'H'), mk(5,'H'), mk(7,'H'), mk(9,'H'), mk(11,'H'),
+            mk(14,'C'), mk(3,'D')
+        };
+        Card flush_to_king[7] = {
+            mk(2,'D'), mk(4,'D'), mk(6,'D'), mk(9,'D'), mk(13,'D'),
+            mk(5,'S'), mk(8,'C')
+        };
+        int s1 = evaluate_poker_hand(flush_to_jack_with_offsuit_ace, 7);
+        int s2 = evaluate_poker_hand(flush_to_king, 7);
+        CHECK(s2 > s1, "King-high flush beats Jack-high flush despite an offsuit Ace kicker");
+    }
+
+    /* Three of a Kind: kickers must break ties between equal trips */
+    {
+        Card trip_sevens_high_kickers[5] = {
+            mk(7,'H'), mk(7,'D'), mk(7,'C'), mk(14,'S'), mk(13,'H')
+        };
+        Card trip_sevens_low_kickers[5] = {
+            mk(7,'S'), mk(7,'C'), mk(7,'D'), mk(2,'H'), mk(3,'D')
+        };
+        int s1 = evaluate_poker_hand(trip_sevens_high_kickers, 5);
+        int s2 = evaluate_poker_hand(trip_sevens_low_kickers, 5);
+        CHECK(s1 > s2, "Trip 7s with A,K kickers beats Trip 7s with 2,3 kickers");
+    }
+
+    /* Two Pair: second pair must break ties between equal top pairs */
+    {
+        Card kk_pair_threes[5] = {
+            mk(13,'H'), mk(13,'D'), mk(3,'C'), mk(3,'S'), mk(9,'H')
+        };
+        Card kk_pair_twos[5] = {
+            mk(13,'C'), mk(13,'S'), mk(2,'H'), mk(2,'D'), mk(9,'C')
+        };
+        int s1 = evaluate_poker_hand(kk_pair_threes, 5);
+        int s2 = evaluate_poker_hand(kk_pair_twos, 5);
+        CHECK(s1 > s2, "K-K with 3-3 second pair beats K-K with 2-2 second pair");
+    }
+
+    /* One Pair: kickers must break ties between equal pairs */
+    {
+        Card pair_sevens_high_kickers[5] = {
+            mk(7,'H'), mk(7,'D'), mk(14,'C'), mk(13,'S'), mk(12,'H')
+        };
+        Card pair_sevens_low_kickers[5] = {
+            mk(7,'S'), mk(7,'C'), mk(2,'H'), mk(3,'D'), mk(4,'C')
+        };
+        int s1 = evaluate_poker_hand(pair_sevens_high_kickers, 5);
+        int s2 = evaluate_poker_hand(pair_sevens_low_kickers, 5);
+        CHECK(s1 > s2, "Pair of 7s with A,K,Q kickers beats Pair of 7s with 2,3,4 kickers");
+    }
+
+    /* High Card: second-highest card must break ties between equal top cards */
+    {
+        Card ace_high_strong[5] = {
+            mk(14,'H'), mk(13,'D'), mk(11,'C'), mk(9,'S'), mk(6,'H')
+        };
+        Card ace_high_weak[5] = {
+            mk(14,'C'), mk(2,'D'), mk(4,'H'), mk(6,'S'), mk(8,'D')
+        };
+        int s1 = evaluate_poker_hand(ace_high_strong, 5);
+        int s2 = evaluate_poker_hand(ace_high_weak, 5);
+        CHECK(s1 > s2, "A-K-J-9-6 beats A-8-6-4-2 (both Ace-high, second card breaks tie)");
+    }
+}
+
+/* =====================================================================
+ * 4c. Player ban flag & save-file versioning (account.c)
+ * ===================================================================== */
+static void test_player_ban_and_versioning(void) {
+    printf("\n=== Player ban flag: persistence & legacy save compatibility ===\n");
+
+    /* Round trip through the current (v3) save format */
+    {
+        Player p = fresh_player(1000, 0, 0);
+        strcpy(p.name, "TEST_BAN_PLAYER_QA");
+        p.is_banned = 1;
+        save_player(&p);
+
+        Player reloaded = { 0 };
+        strcpy(reloaded.name, "TEST_BAN_PLAYER_QA");
+        load_player(&reloaded);
+
+        CHECK(reloaded.is_banned == 1, "is_banned survives save_player + load_player round trip");
+        CHECK(reloaded.balance == 1000, "Balance preserved alongside ban flag");
+
+        remove("data/TEST_BAN_PLAYER_QA.bin");
+    }
+
+    /* A pre-existing v2 save file (no is_banned field) must still load correctly,
+       without triggering the anti-cheat tamper/corruption reset, and default to NOT banned. */
+    {
+        Player legacy = fresh_player(2500, 100, 0);
+        legacy.total_losses = 50;
+        strcpy(legacy.name, "TEST_LEGACY_V2_QA");
+
+        /* Replicates the pre-v3 checksum formula (identical to calculate_checksum with is_banned == 0) */
+        long long checksum = (((long long)legacy.balance * get_salt_1()) ^ ((long long)legacy.bank_balance * get_salt_2())) +
+            (((long long)legacy.total_winnings * 5039LL) ^ (long long)legacy.total_losses) ^ get_secret_key();
+
+        char buffer[1024];
+        int len = snprintf(buffer, sizeof(buffer), "%d\n%s\n%d\n%d\n%lld\n%lld\n%lld\n",
+            2, legacy.name, legacy.balance, legacy.bank_balance,
+            legacy.total_winnings, legacy.total_losses, checksum);
+        crypt_buffer(buffer, len);
+
+        char filename[64];
+        snprintf(filename, sizeof(filename), "data/%s.bin", legacy.name);
+        FILE* f = fopen(filename, "wb");
+        if (f) { fwrite(buffer, 1, len, f); fclose(f); }
+
+        Player reloaded = { 0 };
+        strcpy(reloaded.name, "TEST_LEGACY_V2_QA");
+        load_player(&reloaded);
+
+        CHECK(reloaded.balance == 2500, "Legacy v2 file (no is_banned field): balance loads correctly");
+        CHECK(reloaded.total_losses == 50, "Legacy v2 file: total_losses loads correctly");
+        CHECK(reloaded.is_banned == 0, "Legacy v2 file: missing ban field defaults to NOT banned");
+
+        remove(filename);
+    }
+}
+
 static void test_trips_no_double_credit(void) {
     printf("\n=== TRIPS: regression — no double credit ===\n");
     /*
@@ -389,6 +561,8 @@ static void test_roulette_payouts(void) {
  * main — run all suites, print summary
  * ===================================================================== */
 int main(void) {
+    CreateDirectory("data", NULL);
+
     printf("\x1b[36m╔══════════════════════════════════════╗\x1b[0m\n");
     printf("\x1b[36m║   CASINO TEST HARNESS                ║\x1b[0m\n");
     printf("\x1b[36m╚══════════════════════════════════════╝\x1b[0m\n");
@@ -397,6 +571,8 @@ int main(void) {
     test_calculate_hand_value();
     test_is_soft_17();
     test_poker_hand_ranking();
+    test_poker_hand_comparisons();
+    test_player_ban_and_versioning();
     test_trips_no_double_credit();
     test_football_overflow();
     test_roulette_payouts();
